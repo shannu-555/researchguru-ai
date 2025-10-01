@@ -14,7 +14,136 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_results: {
+        Row: {
+          agent_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          project_id: string
+          results: Json | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_type: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          project_id: string
+          results?: Json | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          project_id?: string
+          results?: Json | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_results_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "research_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insights: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          insight_type: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          insight_type: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          insight_type?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "research_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      research_projects: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          product_name: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          product_name: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          product_name?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          id: string
+          preferences: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preferences?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preferences?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
