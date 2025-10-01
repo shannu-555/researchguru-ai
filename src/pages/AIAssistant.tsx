@@ -1,0 +1,152 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, Bot, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export default function AIAssistant() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content: "Hello! I'm your AI research assistant powered by Groq. I can help you analyze market trends, competitor insights, and provide business intelligence. How can I assist you today?",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: "user" as const, content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-assistant', {
+        body: { messages: [...messages, userMessage] }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to get AI response",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data && data.message) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.message },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error calling AI assistant:', error);
+      toast({
+        title: "Error",
+        description: "Failed to communicate with AI assistant",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-8 h-screen flex flex-col">
+      <div className="space-y-2 mb-6">
+        <h1 className="text-4xl font-bold">AI Assistant</h1>
+        <p className="text-muted-foreground text-lg">
+          Powered by Groq for real-time market intelligence
+        </p>
+      </div>
+
+      <Card className="glass-effect border-border/50 flex-1 flex flex-col">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-primary" />
+            Chat Assistant
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col gap-4">
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex gap-3 ${
+                    message.role === "assistant" ? "justify-start" : "justify-end"
+                  }`}
+                >
+                  {message.role === "assistant" && (
+                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Bot className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] p-4 rounded-lg ${
+                      message.role === "assistant"
+                        ? "bg-secondary/50 border border-border/50"
+                        : "bg-primary text-primary-foreground"
+                    }`}
+                  >
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
+                  {message.role === "user" && (
+                    <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-accent" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex gap-3 justify-start">
+                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-primary animate-pulse" />
+                  </div>
+                  <div className="bg-secondary/50 border border-border/50 p-4 rounded-lg">
+                    <div className="flex gap-1">
+                      <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                      <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-100" />
+                      <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-200" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="flex gap-2">
+            <Input
+              placeholder="Ask me anything about your market research..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSend()}
+              disabled={isLoading}
+              className="bg-background/50"
+            />
+            <Button
+              onClick={handleSend}
+              disabled={isLoading || !input.trim()}
+              className="gradient-primary hover:opacity-90 transition-opacity"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
