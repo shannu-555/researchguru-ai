@@ -4,18 +4,26 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { 
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     projects: 0,
     insights: 0,
     agents: 0,
   });
+  const [latestResults, setLatestResults] = useState<any>(null);
 
   useEffect(() => {
     loadStats();
-  }, []);
+    loadLatestResults();
+  }, [user]);
 
   const loadStats = async () => {
     try {
@@ -32,6 +40,38 @@ export default function Dashboard() {
       });
     } catch (error) {
       console.error('Error loading stats:', error);
+    }
+  };
+
+  const loadLatestResults = async () => {
+    if (!user) return;
+
+    try {
+      const { data: projects } = await supabase
+        .from('research_projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (projects && projects.length > 0) {
+        const { data: results } = await supabase
+          .from('agent_results')
+          .select('*')
+          .eq('project_id', projects[0].id)
+          .eq('status', 'completed');
+
+        if (results && results.length > 0) {
+          const organized = {
+            sentiment: results.find(r => r.agent_type === 'sentiment')?.results as any,
+            competitor: results.find(r => r.agent_type === 'competitor')?.results as any,
+            trend: results.find(r => r.agent_type === 'trend')?.results as any,
+          };
+          setLatestResults(organized);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading latest results:', error);
     }
   };
 
@@ -52,7 +92,7 @@ export default function Dashboard() {
     },
     {
       title: "Competitors Analyzed",
-      value: "0",
+      value: ((latestResults?.competitor as any)?.competitors?.length || 0).toString(),
       description: "Market competitors tracked",
       icon: Users,
       color: "text-cyan-400",
@@ -65,6 +105,8 @@ export default function Dashboard() {
       color: "text-green-400",
     },
   ];
+
+  const COLORS = ['#10b981', '#f59e0b', '#ef4444'];
 
   return (
     <div className="p-8 space-y-8 animate-fade-in">
@@ -98,6 +140,93 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {latestResults && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Sentiment Analysis */}
+          {latestResults.sentiment && (
+            <Card className="glass-effect border-border/50">
+              <CardHeader>
+                <CardTitle>Sentiment Analysis</CardTitle>
+                <CardDescription>Customer sentiment breakdown</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Positive', value: latestResults.sentiment.positive || 0 },
+                        { name: 'Neutral', value: latestResults.sentiment.neutral || 0 },
+                        { name: 'Negative', value: latestResults.sentiment.negative || 0 },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry: any) => {
+                        const { name, percent } = entry;
+                        return `${name}: ${((percent || 0) * 100).toFixed(0)}%`;
+                      }}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {[0, 1, 2].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Trend Analysis */}
+          {latestResults.trend && latestResults.trend.monthlyData && (
+            <Card className="glass-effect border-border/50">
+              <CardHeader>
+                <CardTitle>Market Trends</CardTitle>
+                <CardDescription>12-month trend analysis</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={latestResults.trend.monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Competitor Comparison */}
+          {latestResults.competitor && (latestResults.competitor as any).competitors && (
+            <Card className="glass-effect border-border/50 lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Competitor Comparison</CardTitle>
+                <CardDescription>Market share distribution</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={(latestResults.competitor as any).competitors.slice(0, 5)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="marketShare" fill="#06b6d4" />
+                    <Bar dataKey="rating" fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card 

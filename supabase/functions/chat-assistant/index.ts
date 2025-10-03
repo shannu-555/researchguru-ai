@@ -1,87 +1,149 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, userId } = await req.json();
     
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(
-        JSON.stringify({ error: 'Messages array is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    console.log('Chat assistant request:', { messageCount: messages.length, userId });
+
+    // Get recent agent results for context if userId is provided
+    let agentContext = '';
+    if (userId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { data: projects } = await supabase
+        .from('research_projects')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (projects && projects.length > 0) {
+        const { data: agentResults } = await supabase
+          .from('agent_results')
+          .select('*')
+          .eq('project_id', projects[0].id)
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (agentResults && agentResults.length > 0) {
+          agentContext = `\n\nRecent Research Data:\n${JSON.stringify(agentResults, null, 2)}`;
+        }
+      }
     }
 
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    
     if (!GROQ_API_KEY) {
-      console.error('GROQ_API_KEY not found in environment');
-      return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('GROQ_API_KEY not found, using Lovable AI');
+      return await handleWithLovableAI(messages, agentContext);
     }
 
-    console.log('Calling Groq API with', messages.length, 'messages');
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'mixtral-8x7b-32768',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful AI assistant specialized in market research, business intelligence, and competitive analysis. Provide insightful, data-driven answers to help users make informed business decisions.'
-          },
-          ...messages
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Groq API error:', response.status, errorText);
+    try {
+      const systemMessage = `You are a market research AI assistant. You provide insights based on sentiment analysis, competitor data, and market trends. ${agentContext}
       
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+Be helpful, concise, and actionable. If you have research data above, reference it in your responses. Always provide fresh, contextual answers based on the conversation.`;
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'mixtral-8x7b-32768',
+          messages: [
+            { role: 'system', content: systemMessage },
+            ...messages
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Groq API error:', errorText);
+        
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ 
+            error: 'Rate limit exceeded. Please try again in a moment.' 
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        throw new Error('Groq API error');
       }
 
-      return new Response(
-        JSON.stringify({ error: 'AI service error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      const data = await response.json();
+      const message = data.choices[0].message.content;
+
+      return new Response(JSON.stringify({ message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      console.error('Groq error, falling back to Lovable AI:', error);
+      return await handleWithLovableAI(messages, agentContext);
     }
-
-    const data = await response.json();
-    const assistantMessage = data.choices?.[0]?.message?.content || 'No response generated';
-
-    console.log('Groq API response received successfully');
-
-    return new Response(
-      JSON.stringify({ message: assistantMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('Error in chat-assistant function:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('Error in chat-assistant:', error);
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
+
+async function handleWithLovableAI(messages: any[], agentContext: string) {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  const systemMessage = `You are a market research AI assistant. You provide insights based on sentiment analysis, competitor data, and market trends. ${agentContext}
+  
+Be helpful, concise, and actionable. If you have research data above, reference it in your responses. Always provide fresh, contextual answers based on the conversation.`;
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        { role: 'system', content: systemMessage },
+        ...messages
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Lovable AI error:', errorText);
+    throw new Error('AI service temporarily unavailable');
+  }
+
+  const data = await response.json();
+  const message = data.choices[0].message.content;
+
+  return new Response(JSON.stringify({ message }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}

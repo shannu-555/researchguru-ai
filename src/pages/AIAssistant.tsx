@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   role: "user" | "assistant";
@@ -16,12 +17,39 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hello! I'm your AI research assistant powered by Groq. I can help you analyze market trends, competitor insights, and provide business intelligence. How can I assist you today?",
+      content: "Hello! I'm your AI research assistant powered by Groq. I can help you analyze market trends, competitor insights, and provide business intelligence based on your recent research. How can I assist you today?",
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Stop speech when voice is disabled
+  useEffect(() => {
+    if (!voiceEnabled && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }, [voiceEnabled]);
+
+  const speak = (text: string) => {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -33,7 +61,10 @@ export default function AIAssistant() {
 
     try {
       const { data, error } = await supabase.functions.invoke('chat-assistant', {
-        body: { messages: [...messages, userMessage] }
+        body: { 
+          messages: [...messages, userMessage],
+          userId: user?.id 
+        }
       });
 
       if (error) {
@@ -47,10 +78,13 @@ export default function AIAssistant() {
       }
 
       if (data && data.message) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.message },
-        ]);
+        const assistantMessage = { role: "assistant" as const, content: data.message };
+        setMessages((prev) => [...prev, assistantMessage]);
+        
+        // Speak the response if voice is enabled
+        if (voiceEnabled) {
+          speak(data.message);
+        }
       }
     } catch (error) {
       console.error('Error calling AI assistant:', error);
@@ -64,13 +98,37 @@ export default function AIAssistant() {
     }
   };
 
+  const toggleVoice = () => {
+    setVoiceEnabled(!voiceEnabled);
+    if (voiceEnabled && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
   return (
-    <div className="p-8 h-screen flex flex-col">
+    <div className="p-8 h-screen flex flex-col animate-fade-in">
       <div className="space-y-2 mb-6">
-        <h1 className="text-4xl font-bold">AI Assistant</h1>
-        <p className="text-muted-foreground text-lg">
-          Powered by Groq for real-time market intelligence
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold">AI Assistant</h1>
+            <p className="text-muted-foreground text-lg">
+              Powered by Groq for real-time market intelligence
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleVoice}
+            className={voiceEnabled ? "bg-primary/20" : ""}
+          >
+            {voiceEnabled ? (
+              <Volume2 className={`h-5 w-5 ${isSpeaking ? "animate-pulse" : ""}`} />
+            ) : (
+              <VolumeX className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
       </div>
 
       <Card className="glass-effect border-border/50 flex-1 flex flex-col">
@@ -102,7 +160,7 @@ export default function AIAssistant() {
                         : "bg-primary text-primary-foreground"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                   </div>
                   {message.role === "user" && (
                     <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">

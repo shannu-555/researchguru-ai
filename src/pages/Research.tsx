@@ -1,17 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Research() {
   const [productName, setProductName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [agentStatus, setAgentStatus] = useState({
+    sentiment: "Ready",
+    competitor: "Ready",
+    trend: "Ready",
+  });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleStartResearch = async () => {
     if (!productName.trim()) {
@@ -24,19 +32,93 @@ export default function Research() {
     }
 
     setIsLoading(true);
-    
-    // TODO: Implement research API call
-    setTimeout(() => {
-      setIsLoading(false);
+    setAgentStatus({
+      sentiment: "Pending",
+      competitor: "Pending",
+      trend: "Pending",
+    });
+
+    try {
+      // Create research project
+      const { data: project, error: projectError } = await supabase
+        .from('research_projects')
+        .insert({
+          product_name: productName,
+          company_name: companyName,
+          description: description,
+          status: 'in_progress',
+          user_id: user?.id,
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
       toast({
         title: "Research started",
         description: "AI agents are analyzing your request...",
       });
-    }, 1500);
+
+      // Update status to in progress
+      setAgentStatus({
+        sentiment: "In Progress",
+        competitor: "In Progress",
+        trend: "In Progress",
+      });
+
+      // Call the run-agents function
+      const { data, error } = await supabase.functions.invoke('run-agents', {
+        body: {
+          productName,
+          companyName,
+          description,
+          projectId: project.id,
+        }
+      });
+
+      if (error) throw error;
+
+      // Update status to completed
+      setAgentStatus({
+        sentiment: "Completed",
+        competitor: "Completed",
+        trend: "Completed",
+      });
+
+      // Update project status
+      await supabase
+        .from('research_projects')
+        .update({ status: 'completed' })
+        .eq('id', project.id);
+
+      toast({
+        title: "Research completed",
+        description: "All agents have finished analyzing. Check the dashboard for results.",
+      });
+
+      // Reset form
+      setProductName("");
+      setCompanyName("");
+      setDescription("");
+    } catch (error: any) {
+      console.error('Research error:', error);
+      setAgentStatus({
+        sentiment: "Failed",
+        competitor: "Failed",
+        trend: "Failed",
+      });
+      toast({
+        title: "Research failed",
+        description: error.message || "Failed to complete research. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-8 animate-fade-in">
       <div className="space-y-2">
         <h1 className="text-4xl font-bold">Product Research</h1>
         <p className="text-muted-foreground text-lg">
@@ -113,9 +195,9 @@ export default function Research() {
             <CardDescription>Monitor AI agents progress</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <AgentStatus name="Sentiment Agent" status="Ready" />
-            <AgentStatus name="Competitor Agent" status="Ready" />
-            <AgentStatus name="Trends Agent" status="Ready" />
+            <AgentStatus name="Sentiment Agent" status={agentStatus.sentiment} />
+            <AgentStatus name="Competitor Agent" status={agentStatus.competitor} />
+            <AgentStatus name="Trends Agent" status={agentStatus.trend} />
           </CardContent>
         </Card>
       </div>
@@ -124,19 +206,23 @@ export default function Research() {
 }
 
 function AgentStatus({ name, status }: { name: string; status: string }) {
-  const statusColors = {
-    Ready: "bg-gray-500",
-    Pending: "bg-yellow-500",
-    "In Progress": "bg-blue-500 animate-pulse",
-    Completed: "bg-green-500",
-    Failed: "bg-red-500",
+  const statusConfig = {
+    Ready: { color: "bg-gray-500", icon: Clock },
+    Pending: { color: "bg-yellow-500", icon: Clock },
+    "In Progress": { color: "bg-blue-500 animate-pulse", icon: Loader2 },
+    Completed: { color: "bg-green-500", icon: CheckCircle },
+    Failed: { color: "bg-red-500", icon: XCircle },
   };
+
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.Ready;
+  const Icon = config.icon;
 
   return (
     <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border/50">
       <span className="font-medium">{name}</span>
       <div className="flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${statusColors[status as keyof typeof statusColors] || statusColors.Ready}`} />
+        <div className={`h-2 w-2 rounded-full ${config.color}`} />
+        <Icon className={`h-4 w-4 ${status === "In Progress" ? "animate-spin" : ""}`} />
         <span className="text-sm text-muted-foreground">{status}</span>
       </div>
     </div>
