@@ -18,6 +18,8 @@ export default function Research() {
     competitor: "Ready",
     trend: "Ready",
   });
+  const [agentOutcomes, setAgentOutcomes] = useState<Record<string, any>>({});
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -53,6 +55,8 @@ export default function Research() {
         .single();
 
       if (projectError) throw projectError;
+
+      setCurrentProjectId(project.id);
 
       toast({
         title: "Research started",
@@ -92,6 +96,20 @@ export default function Research() {
         trend: "Completed",
       });
 
+      // Fetch agent outcomes from database
+      const { data: agentResults, error: resultsError } = await supabase
+        .from('agent_results')
+        .select('*')
+        .eq('project_id', project.id);
+
+      if (!resultsError && agentResults) {
+        const outcomes: Record<string, any> = {};
+        agentResults.forEach(result => {
+          outcomes[result.agent_type] = result;
+        });
+        setAgentOutcomes(outcomes);
+      }
+
       // Update project status
       await supabase
         .from('research_projects')
@@ -100,10 +118,10 @@ export default function Research() {
 
       toast({
         title: "Research completed",
-        description: "All agents have finished analyzing. Check the dashboard for results.",
+        description: "All agents have finished analyzing. Check the outcomes below.",
       });
 
-      // Reset form
+      // Reset form but keep outcomes visible
       setProductName("");
       setCompanyName("");
       setDescription("");
@@ -114,9 +132,26 @@ export default function Research() {
         competitor: "Failed",
         trend: "Failed",
       });
+      
+      // Try to fetch any partial results
+      if (currentProjectId) {
+        const { data: agentResults } = await supabase
+          .from('agent_results')
+          .select('*')
+          .eq('project_id', currentProjectId);
+
+        if (agentResults) {
+          const outcomes: Record<string, any> = {};
+          agentResults.forEach(result => {
+            outcomes[result.agent_type] = result;
+          });
+          setAgentOutcomes(outcomes);
+        }
+      }
+
       toast({
         title: "Research failed",
-        description: error.message || "Failed to complete research. Please try again.",
+        description: error.message || "Failed to complete research. Check outcomes below for partial results.",
         variant: "destructive",
       });
     } finally {
@@ -202,17 +237,70 @@ export default function Research() {
             <CardDescription>Monitor AI agents progress</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <AgentStatus name="Sentiment Agent" status={agentStatus.sentiment} />
-            <AgentStatus name="Competitor Agent" status={agentStatus.competitor} />
-            <AgentStatus name="Trends Agent" status={agentStatus.trend} />
+            <AgentStatus 
+              name="Sentiment Agent" 
+              status={agentStatus.sentiment}
+              outcome={agentOutcomes['sentiment']}
+            />
+            <AgentStatus 
+              name="Competitor Agent" 
+              status={agentStatus.competitor}
+              outcome={agentOutcomes['competitor']}
+            />
+            <AgentStatus 
+              name="Trends Agent" 
+              status={agentStatus.trend}
+              outcome={agentOutcomes['trend']}
+            />
           </CardContent>
         </Card>
       </div>
+
+      {/* Outcomes Section */}
+      {Object.keys(agentOutcomes).length > 0 && (
+        <Card className="glass-effect border-border/50">
+          <CardHeader>
+            <CardTitle>Research Outcomes</CardTitle>
+            <CardDescription>Detailed results from each agent</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {agentOutcomes['sentiment'] && (
+              <OutcomeCard
+                title="Sentiment Analysis"
+                agentType="sentiment"
+                outcome={agentOutcomes['sentiment']}
+              />
+            )}
+            {agentOutcomes['competitor'] && (
+              <OutcomeCard
+                title="Competitor Analysis"
+                agentType="competitor"
+                outcome={agentOutcomes['competitor']}
+              />
+            )}
+            {agentOutcomes['trend'] && (
+              <OutcomeCard
+                title="Market Trends"
+                agentType="trend"
+                outcome={agentOutcomes['trend']}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-function AgentStatus({ name, status }: { name: string; status: string }) {
+function AgentStatus({ 
+  name, 
+  status, 
+  outcome 
+}: { 
+  name: string; 
+  status: string;
+  outcome?: any;
+}) {
   const statusConfig = {
     Ready: { color: "bg-gray-500", icon: Clock },
     Pending: { color: "bg-yellow-500", icon: Clock },
@@ -225,13 +313,185 @@ function AgentStatus({ name, status }: { name: string; status: string }) {
   const Icon = config.icon;
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border/50">
-      <span className="font-medium">{name}</span>
-      <div className="flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${config.color}`} />
-        <Icon className={`h-4 w-4 ${status === "In Progress" ? "animate-spin" : ""}`} />
-        <span className="text-sm text-muted-foreground">{status}</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border/50">
+        <span className="font-medium">{name}</span>
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${config.color}`} />
+          <Icon className={`h-4 w-4 ${status === "In Progress" ? "animate-spin" : ""}`} />
+          <span className="text-sm text-muted-foreground">{status}</span>
+        </div>
       </div>
+      
+      {outcome && (
+        <div className="ml-4 p-3 rounded-lg bg-background/50 border border-border/30">
+          {outcome.status === 'failed' ? (
+            <p className="text-sm text-destructive">Error: {outcome.error_message || 'Unknown error'}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              ✓ Outcome available - scroll down to view details
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OutcomeCard({ 
+  title, 
+  agentType, 
+  outcome 
+}: { 
+  title: string; 
+  agentType: string;
+  outcome: any;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  if (outcome.status === 'failed') {
+    return (
+      <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/50">
+        <h3 className="font-semibold text-destructive mb-2">{title} - Failed</h3>
+        <p className="text-sm text-muted-foreground">{outcome.error_message || 'Unknown error occurred'}</p>
+      </div>
+    );
+  }
+
+  const results = outcome.results;
+  
+  if (!results) {
+    return (
+      <div className="p-4 rounded-lg bg-secondary/50 border border-border/50">
+        <h3 className="font-semibold mb-2">{title}</h3>
+        <p className="text-sm text-muted-foreground">No outcome generated</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-lg bg-secondary/50 border border-border/50">
+      <div 
+        className="flex items-center justify-between cursor-pointer mb-3"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <h3 className="font-semibold">{title}</h3>
+        <Button variant="ghost" size="sm">
+          {isExpanded ? "Hide Details" : "View Details"}
+        </Button>
+      </div>
+      
+      {isExpanded && (
+        <div className="space-y-3 text-sm">
+          {agentType === 'sentiment' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-background/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
+                  <p className="text-2xl font-bold">{results.overallScore || 'N/A'}</p>
+                </div>
+                <div className="p-3 bg-background/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Sentiment</p>
+                  <div className="space-y-1">
+                    <p className="text-green-500">Positive: {results.positive}%</p>
+                    <p className="text-red-500">Negative: {results.negative}%</p>
+                    <p className="text-gray-500">Neutral: {results.neutral}%</p>
+                  </div>
+                </div>
+              </div>
+              {results.positiveThemes && (
+                <div>
+                  <p className="font-medium mb-2">Positive Themes:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.positiveThemes.map((theme: string, i: number) => (
+                      <li key={i}>{theme}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {results.negativeThemes && (
+                <div>
+                  <p className="font-medium mb-2">Negative Themes:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.negativeThemes.map((theme: string, i: number) => (
+                      <li key={i}>{theme}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          {agentType === 'competitor' && results.competitors && (
+            <div className="space-y-3">
+              {results.competitors.map((comp: any, i: number) => (
+                <div key={i} className="p-3 bg-background/50 rounded-lg">
+                  <p className="font-medium">{comp.name}</p>
+                  <p className="text-xs text-muted-foreground">{comp.company}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                    <span>Price: {comp.price}</span>
+                    <span>Rating: {comp.rating}/5</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {agentType === 'trend' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-background/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Trend Score</p>
+                  <p className="text-2xl font-bold">{results.trendScore || 'N/A'}</p>
+                </div>
+                <div className="p-3 bg-background/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Growth Rate</p>
+                  <p className="text-2xl font-bold">{results.growthRate}%</p>
+                </div>
+              </div>
+              {results.keywords && (
+                <div>
+                  <p className="font-medium mb-2">Trending Keywords:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {results.keywords.map((keyword: string, i: number) => (
+                      <span key={i} className="px-2 py-1 bg-primary/20 rounded-md text-xs">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {results.insights && (
+                <div>
+                  <p className="font-medium mb-2">Key Insights:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.insights.map((insight: string, i: number) => (
+                      <li key={i}>{insight}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="pt-3 border-t border-border/50">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${agentType}-results.json`;
+                a.click();
+              }}
+            >
+              Download as JSON
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
