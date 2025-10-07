@@ -9,9 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { InsightsSummary } from "@/components/InsightsSummary";
-import { ShareProjectDialog } from "@/components/ShareProjectDialog";
-import { ProjectComments } from "@/components/ProjectComments";
-import { useActivityTracking } from "@/hooks/useActivityTracking";
 export default function Research() {
   const [productName, setProductName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -26,7 +23,6 @@ export default function Research() {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { trackActivity } = useActivityTracking();
 
   const handleStartResearch = async () => {
     if (!productName.trim()) {
@@ -271,23 +267,15 @@ export default function Research() {
                   <CardTitle>Research Outcomes</CardTitle>
                   <CardDescription>Detailed results from each agent</CardDescription>
                 </div>
-          <div className="flex gap-2">
-            {currentProjectId && (
-              <>
-                <ShareProjectDialog 
-                  projectId={currentProjectId}
-                  projectName={productName || 'Research Project'}
-                />
-                <ReportGenerator 
-                  data={{
-                    projectName: productName || 'Research Project',
-                    companyName: companyName,
-                    agentResults: Object.values(agentOutcomes)
-                  }}
-                />
-              </>
-            )}
-          </div>
+                {currentProjectId && (
+                  <ReportGenerator 
+                    data={{
+                      projectName: productName || 'Research Project',
+                      companyName: companyName,
+                      agentResults: Object.values(agentOutcomes)
+                    }}
+                  />
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -315,12 +303,9 @@ export default function Research() {
             </CardContent>
           </Card>
 
-      {currentProjectId && (
-        <>
-          <InsightsSummary projectId={currentProjectId} />
-          <ProjectComments projectId={currentProjectId} />
-        </>
-      )}
+          {currentProjectId && (
+            <InsightsSummary projectId={currentProjectId} />
+          )}
         </>
       )}
     </div>
