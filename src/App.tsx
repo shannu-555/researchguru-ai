@@ -3,13 +3,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Research from "./pages/Research";
 import Comparison from "./pages/Comparison";
 import AIAssistant from "./pages/AIAssistant";
-import SettingsPage from "./pages/SettingsPage";
+import EnhancedSettings from "./pages/EnhancedSettings";
 import Pricing from "./pages/Pricing";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import Auth from "./pages/Auth";
@@ -37,33 +38,35 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/research" element={<Research />} />
-              <Route path="/comparison" element={<Comparison />} />
-              <Route path="/assistant" element={<AIAssistant />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/research" element={<Research />} />
+                <Route path="/comparison" element={<Comparison />} />
+                <Route path="/assistant" element={<AIAssistant />} />
+                <Route path="/settings" element={<EnhancedSettings />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

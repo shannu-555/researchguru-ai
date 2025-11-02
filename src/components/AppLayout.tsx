@@ -1,6 +1,8 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { ThemeToggle } from "./ThemeToggle";
+import { UserProfileDropdown } from "./UserProfileDropdown";
 
 export const AppLayout = () => {
   return (
@@ -8,6 +10,10 @@ export const AppLayout = () => {
       <div className="min-h-screen flex w-full">
         <Sidebar />
         <main className="flex-1 overflow-auto">
+          <div className="sticky top-0 z-10 flex items-center justify-end gap-2 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
+            <ThemeToggle />
+            <UserProfileDropdown />
+          </div>
           <Outlet />
         </main>
       </div>

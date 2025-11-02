@@ -70,7 +70,7 @@ export default function SearchFilters({ onSearch }: SearchFiltersProps) {
     <div className="space-y-4 p-6 bg-card rounded-lg border">
       <div className="flex items-center gap-2">
         <Filter className="h-5 w-5 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">Search & Filter</h3>
+        <h3 className="text-lg font-semibold">Advanced Search & Filter</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -79,11 +79,18 @@ export default function SearchFilters({ onSearch }: SearchFiltersProps) {
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search outcomes..."
+              placeholder="Search by product, company, or keyword..."
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
               className="pl-10"
+              list="search-suggestions"
             />
+            <datalist id="search-suggestions">
+              <option value="iPhone" />
+              <option value="Samsung Galaxy" />
+              <option value="Tesla" />
+              <option value="Amazon" />
+            </datalist>
           </div>
         </div>
 

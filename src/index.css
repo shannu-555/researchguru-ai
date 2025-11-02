@@ -8,6 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 263 70% 50%;
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 263 70% 65%;
+
+    --secondary: 217 33% 97%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 217 33% 97%;
+    --muted-foreground: 215 20% 35%;
+
+    --accent: 189 100% 50%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 88%;
+    --input: 217 33% 88%;
+    --ring: 263 70% 50%;
+
+    --radius: 0.75rem;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(263 70% 50%), hsl(220 90% 56%));
+    --gradient-accent: linear-gradient(135deg, hsl(189 100% 50%), hsl(263 70% 50%));
+    --shadow-glow: 0 0 40px hsl(263 70% 50% / 0.3);
+    --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.1);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 263 70% 50%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217 33% 95%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 217 33% 88%;
+    --sidebar-ring: 263 70% 50%;
+  }
+
+  .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
@@ -37,8 +84,6 @@ All colors MUST be HSL.
     --input: 217 33% 22%;
     --ring: 263 70% 50%;
 
-    --radius: 0.75rem;
-    
     --gradient-primary: linear-gradient(135deg, hsl(263 70% 50%), hsl(220 90% 56%));
     --gradient-accent: linear-gradient(135deg, hsl(189 100% 50%), hsl(263 70% 50%));
     --shadow-glow: 0 0 40px hsl(263 70% 50% / 0.3);
