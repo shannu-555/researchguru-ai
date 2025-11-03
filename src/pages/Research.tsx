@@ -607,27 +607,101 @@ function OutcomeCard({
                   <p className="text-2xl font-bold">{results.growthRate}%</p>
                 </div>
               </div>
-              {results.keywords && (
+              
+              {results.demandPattern && (
+                <div className="p-3 bg-background/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Demand Pattern</p>
+                  <p className={`text-lg font-semibold capitalize ${
+                    results.demandPattern === 'rising' ? 'text-green-500' :
+                    results.demandPattern === 'declining' ? 'text-red-500' :
+                    'text-yellow-500'
+                  }`}>
+                    {results.demandPattern}
+                  </p>
+                </div>
+              )}
+
+              {results.keywords && results.keywords.length > 0 && (
                 <div>
-                  <p className="font-medium mb-2">Trending Keywords:</p>
+                  <p className="font-medium mb-2">🔥 Top Trending Keywords:</p>
                   <div className="flex flex-wrap gap-2">
                     {results.keywords.map((keyword: string, i: number) => (
-                      <span key={i} className="px-2 py-1 bg-primary/20 rounded-md text-xs">
+                      <span key={i} className="px-3 py-1 bg-primary/20 rounded-full text-xs font-medium">
                         {keyword}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
-              {results.insights && (
+
+              {results.emergingTopics && results.emergingTopics.length > 0 && (
                 <div>
-                  <p className="font-medium mb-2">Key Insights:</p>
+                  <p className="font-medium mb-2">📈 Emerging Topics:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.emergingTopics.map((topic: string, i: number) => (
+                      <li key={i}>{topic}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {results.recentMentions && results.recentMentions.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">📰 Recent Market Mentions:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.recentMentions.map((mention: string, i: number) => (
+                      <li key={i}>{mention}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {results.marketShift && (
+                <div className="p-4 bg-secondary/30 rounded-lg border border-border/50">
+                  <p className="font-medium mb-2">🔄 Market Shift Analysis:</p>
+                  <p className="text-sm text-muted-foreground">{results.marketShift}</p>
+                </div>
+              )}
+
+              {results.industryImpact && results.industryImpact.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">🌍 Industry Impact:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {results.industryImpact.map((industry: string, i: number) => (
+                      <span key={i} className="px-3 py-1 bg-accent/20 rounded-md text-xs">
+                        {industry}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results.insights && results.insights.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">💡 Key Insights:</p>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     {results.insights.map((insight: string, i: number) => (
                       <li key={i}>{insight}</li>
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {results.predictions && results.predictions.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">🔮 Future Predictions:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.predictions.map((prediction: string, i: number) => (
+                      <li key={i}>{prediction}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {results.analysisDate && (
+                <p className="text-xs text-muted-foreground italic">
+                  Analysis Date: {results.analysisDate}
+                </p>
               )}
             </>
           )}

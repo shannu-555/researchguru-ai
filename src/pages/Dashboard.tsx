@@ -309,10 +309,24 @@ export default function Dashboard() {
           {latestResults.trend && latestResults.trend.monthlyData && (
             <Card className="glass-effect border-border/50">
               <CardHeader>
-                <CardTitle>Market Trends</CardTitle>
-                <CardDescription>12-month trend analysis</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  Market Trends
+                  {latestResults.trend.demandPattern && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      latestResults.trend.demandPattern === 'rising' ? 'bg-green-500/20 text-green-500' :
+                      latestResults.trend.demandPattern === 'declining' ? 'bg-red-500/20 text-red-500' :
+                      'bg-yellow-500/20 text-yellow-500'
+                    }`}>
+                      {latestResults.trend.demandPattern}
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  {latestResults.trend.trendScore && `Trend Score: ${latestResults.trend.trendScore}/100 • `}
+                  12-month analysis
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={latestResults.trend.monthlyData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -320,9 +334,22 @@ export default function Dashboard() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} name="Trend Value" />
                   </LineChart>
                 </ResponsiveContainer>
+                
+                {latestResults.trend.keywords && latestResults.trend.keywords.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Top Keywords:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {latestResults.trend.keywords.slice(0, 6).map((keyword: string, i: number) => (
+                        <span key={i} className="px-2 py-1 bg-primary/10 rounded-md text-xs">
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
