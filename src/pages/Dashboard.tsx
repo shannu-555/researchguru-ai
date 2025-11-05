@@ -9,6 +9,9 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
+import MarketPulseIndex from "@/components/MarketPulseIndex";
+import CrossMarketCorrelation from "@/components/CrossMarketCorrelation";
+import ConsumerPersonaPredictor from "@/components/ConsumerPersonaPredictor";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -441,12 +444,31 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Advanced Analytics Section */}
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Future Insights & Predictive Analytics
+          </h2>
+          <p className="text-muted-foreground">
+            Next-level market intelligence powered by AI
+          </p>
+        </div>
+
+        <MarketPulseIndex />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CrossMarketCorrelation />
+          <ConsumerPersonaPredictor />
+        </div>
+      </div>
+
       {stats.projects === 0 && (
         <Card className="glass-effect border-border/50 border-primary/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Welcome to Market Research AI!
+              Welcome to Market Research Intelligence Dashboard!
             </CardTitle>
             <CardDescription>
               Get started by creating your first research project
@@ -462,12 +484,6 @@ export default function Dashboard() {
                 className="gradient-primary hover:opacity-90 transition-opacity"
               >
                 Create Research Project
-              </Button>
-              <Button 
-                onClick={() => navigate('/settings')}
-                variant="outline"
-              >
-                Configure API Keys
               </Button>
             </div>
           </CardContent>

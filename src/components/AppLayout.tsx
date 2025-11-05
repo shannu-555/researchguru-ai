@@ -12,7 +12,7 @@ export const AppLayout = () => {
         <main className="flex-1 overflow-auto">
           <div className="sticky top-0 z-10 flex items-center justify-between gap-2 px-6 py-3 bg-background/80 backdrop-blur-sm border-b border-border/50">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Market Research
+              Market Research Intelligence Dashboard
             </h1>
             <div className="flex items-center gap-2">
               <ThemeToggle />

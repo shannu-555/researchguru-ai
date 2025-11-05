@@ -1,4 +1,4 @@
-import { LayoutDashboard, Search, GitCompare, MessageSquare, Settings, Menu, DollarSign, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, Search, GitCompare, MessageSquare, Settings, Menu, DollarSign, LogOut, Shield, TrendingUp } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -20,6 +20,7 @@ const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Research", url: "/research", icon: Search },
   { title: "Comparison", url: "/comparison", icon: GitCompare },
+  { title: "Future Insights", url: "/future-insights", icon: TrendingUp },
   { title: "AI Assistant", url: "/assistant", icon: MessageSquare },
   { title: "Pricing", url: "/pricing", icon: DollarSign },
   { title: "Settings", url: "/settings", icon: Settings },
