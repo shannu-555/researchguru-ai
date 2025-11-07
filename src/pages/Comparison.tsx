@@ -1,87 +1,93 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, TrendingUp, DollarSign } from "lucide-react";
+import { Star, TrendingUp, DollarSign, Brain } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { ComparisonSelector } from "@/components/ComparisonSelector";
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
+
+interface Product {
+  id: string;
+  name: string;
+  company: string;
+  rating: number;
+  price: string;
+  features?: string[];
+  advantages?: string[];
+  disadvantages?: string[];
+  marketShare?: number;
+}
 
 export default function Comparison() {
   const { user } = useAuth();
-  const [competitors, setCompetitors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [aiInsights, setAiInsights] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadCompetitors();
-  }, [user]);
-
-  const loadCompetitors = async () => {
-    if (!user) return;
+  const handleProductsSelected = async (products: Product[]) => {
+    setSelectedProducts(products);
+    setLoading(true);
 
     try {
-      const { data: projects } = await supabase
-        .from('research_projects')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (projects && projects.length > 0) {
-        const { data: results } = await supabase
-          .from('agent_results')
-          .select('*')
-          .eq('project_id', projects[0].id)
-          .eq('agent_type', 'competitor')
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (results && results.length > 0) {
-          const resultData = results[0].results as any;
-          if (resultData?.competitors && Array.isArray(resultData.competitors)) {
-            setCompetitors(resultData.competitors);
-          }
+      const productNames = products.map(p => p.name).join(', ');
+      const { data, error } = await supabase.functions.invoke('chat-assistant', {
+        body: { 
+          messages: [
+            {
+              role: "user",
+              content: `Compare these products and provide key insights: ${productNames}. Focus on competitive advantages, market positioning, and recommendations.`
+            }
+          ],
+          userId: user?.id 
         }
+      });
+
+      if (error) throw error;
+      if (data?.message) {
+        setAiInsights(data.message);
       }
     } catch (error) {
-      console.error('Error loading competitors:', error);
+      console.error('Error generating AI insights:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate AI insights",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const chartData = competitors.map(c => ({
-    name: c.name,
-    rating: c.rating,
-    marketShare: c.marketShare || 0,
+  const comparisonData = selectedProducts.map(p => ({
+    name: p.name,
+    rating: p.rating,
+    features: p.features?.length || 0,
+    marketShare: p.marketShare || 0,
   }));
 
-  if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center">
-        <p className="text-muted-foreground">Loading competitor data...</p>
-      </div>
-    );
-  }
+  const radarData = [
+    { metric: 'Rating', ...Object.fromEntries(selectedProducts.map(p => [p.name, p.rating * 20])) },
+    { metric: 'Features', ...Object.fromEntries(selectedProducts.map(p => [p.name, (p.features?.length || 0) * 10])) },
+    { metric: 'Price Value', ...Object.fromEntries(selectedProducts.map(p => [p.name, 75])) },
+    { metric: 'Market Share', ...Object.fromEntries(selectedProducts.map(p => [p.name, (p.marketShare || 15)])) },
+  ];
 
-  if (competitors.length === 0) {
+  if (selectedProducts.length === 0) {
     return (
-      <div className="p-8 space-y-8">
+      <div className="p-8 space-y-8 animate-fade-in">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold">Competitor Analysis</h1>
+          <h1 className="text-4xl font-bold">Product Comparison Dashboard</h1>
           <p className="text-muted-foreground text-lg">
-            Real-time competitor insights and market positioning
+            Side-by-side analysis with AI-powered insights
           </p>
         </div>
-        <Card className="glass-effect border-border/50">
-          <CardContent className="p-12 text-center">
-            <p className="text-muted-foreground">
-              No competitor data available. Start a research project to see competitor analysis.
-            </p>
-          </CardContent>
-        </Card>
+        <ComparisonSelector onProductsSelected={handleProductsSelected} />
       </div>
     );
   }
@@ -89,41 +95,42 @@ export default function Comparison() {
   return (
     <div className="p-8 space-y-8 animate-fade-in">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold">Competitor Analysis</h1>
+        <h1 className="text-4xl font-bold">Product Comparison Dashboard</h1>
         <p className="text-muted-foreground text-lg">
-          Real-time competitor insights and market positioning
+          Side-by-side analysis with synchronized metrics and AI insights
         </p>
       </div>
 
+      {/* Side-by-side comparison cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {competitors.map((competitor, index) => (
+        {selectedProducts.map((product) => (
           <Card
-            key={index}
+            key={product.id}
             className="glass-effect border-border/50 hover:border-primary/50 transition-all"
           >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>{competitor.name}</span>
+                <span>{product.name}</span>
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm">{competitor.rating}</span>
+                  <span className="text-sm">{product.rating}</span>
                 </div>
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                {competitor.price}
+                {product.price}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-muted-foreground">Company</h4>
-                <p className="text-sm">{competitor.company}</p>
+                <p className="text-sm">{product.company}</p>
               </div>
 
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-muted-foreground">Key Features</h4>
                 <div className="flex flex-wrap gap-2">
-                  {competitor.features?.map((feature: string, i: number) => (
+                  {product.features?.map((feature: string, i: number) => (
                     <Badge key={i} variant="secondary" className="text-xs">
                       {feature}
                     </Badge>
@@ -134,7 +141,7 @@ export default function Comparison() {
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-muted-foreground">Advantages</h4>
                 <ul className="text-sm space-y-1">
-                  {competitor.advantages?.map((adv: string, i: number) => (
+                  {product.advantages?.map((adv: string, i: number) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="text-green-400">✓</span>
                       <span>{adv}</span>
@@ -143,24 +150,12 @@ export default function Comparison() {
                 </ul>
               </div>
 
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-muted-foreground">Disadvantages</h4>
-                <ul className="text-sm space-y-1">
-                  {competitor.disadvantages?.map((dis: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-red-400">✗</span>
-                      <span>{dis}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {competitor.marketShare && (
+              {product.marketShare && (
                 <div className="p-2 rounded-lg bg-secondary/50 border border-border/50">
                   <p className="text-xs text-muted-foreground">Market Share</p>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-3 w-3 text-primary" />
-                    <p className="text-sm font-medium">{competitor.marketShare}%</p>
+                    <p className="text-sm font-medium">{product.marketShare}%</p>
                   </div>
                 </div>
               )}
@@ -169,27 +164,83 @@ export default function Comparison() {
         ))}
       </div>
 
-      {chartData.length > 0 && (
+      {/* Synchronized charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="glass-effect border-border/50">
           <CardHeader>
-            <CardTitle>Competitive Landscape</CardTitle>
-            <CardDescription>Market positioning and ratings comparison</CardDescription>
+            <CardTitle>Side-by-Side Metrics</CardTitle>
+            <CardDescription>Direct comparison of key indicators</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={chartData}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={comparisonData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="rating" fill="#10b981" name="Rating (out of 5)" />
-                <Bar dataKey="marketShare" fill="#06b6d4" name="Market Share %" />
+                <Bar dataKey="rating" fill="#10b981" name="Rating" />
+                <Bar dataKey="features" fill="#06b6d4" name="Features Count" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      )}
+
+        <Card className="glass-effect border-border/50">
+          <CardHeader>
+            <CardTitle>Multi-Dimensional Analysis</CardTitle>
+            <CardDescription>Radar chart showing all metrics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <RadarChart data={radarData}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="metric" />
+                <PolarRadiusAxis />
+                {selectedProducts.map((product, index) => (
+                  <Radar
+                    key={product.id}
+                    name={product.name}
+                    dataKey={product.name}
+                    stroke={`hsl(${index * 120}, 70%, 50%)`}
+                    fill={`hsl(${index * 120}, 70%, 50%)`}
+                    fillOpacity={0.3}
+                  />
+                ))}
+                <Legend />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AI-generated insights */}
+      <Card className="glass-effect border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            AI-Generated Comparative Insights
+          </CardTitle>
+          <CardDescription>
+            Intelligent analysis powered by Groq AI
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="flex gap-1">
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-100" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-200" />
+              </div>
+            </div>
+          ) : (
+            <div className="prose prose-sm max-w-none">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{aiInsights}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

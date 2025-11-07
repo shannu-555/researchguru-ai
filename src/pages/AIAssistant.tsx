@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Volume2, VolumeX } from "lucide-react";
+import { Send, Bot, User, Volume2, VolumeX, Mic, MicOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,8 +24,39 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsRecording(false);
+        toast({
+          title: "Error",
+          description: "Voice recognition failed",
+          variant: "destructive",
+        });
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, [toast]);
 
   // Stop speech when voice is disabled
   useEffect(() => {
@@ -107,28 +138,61 @@ export default function AIAssistant() {
     }
   };
 
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      toast({
+        title: "Not Supported",
+        description: "Voice recognition is not supported in this browser",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      recognitionRef.current.start();
+      setIsRecording(true);
+    }
+  };
+
   return (
     <div className="p-8 h-screen flex flex-col animate-fade-in">
       <div className="space-y-2 mb-6">
-        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold">AI Assistant</h1>
             <p className="text-muted-foreground text-lg">
               Powered by Groq for real-time market intelligence
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleVoice}
-            className={voiceEnabled ? "bg-primary/20" : ""}
-          >
-            {voiceEnabled ? (
-              <Volume2 className={`h-5 w-5 ${isSpeaking ? "animate-pulse" : ""}`} />
-            ) : (
-              <VolumeX className="h-5 w-5" />
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleRecording}
+              className={isRecording ? "bg-red-500/20 animate-pulse" : ""}
+            >
+              {isRecording ? (
+                <MicOff className="h-5 w-5 text-red-500" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleVoice}
+              className={voiceEnabled ? "bg-primary/20" : ""}
+            >
+              {voiceEnabled ? (
+                <Volume2 className={`h-5 w-5 ${isSpeaking ? "animate-pulse" : ""}`} />
+              ) : (
+                <VolumeX className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

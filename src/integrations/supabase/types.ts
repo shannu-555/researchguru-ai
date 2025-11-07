@@ -126,6 +126,73 @@ export type Database = {
           },
         ]
       }
+      profile_downloads: {
+        Row: {
+          download_date: string | null
+          file_name: string
+          file_type: string
+          file_url: string | null
+          id: string
+          profile_id: string | null
+        }
+        Insert: {
+          download_date?: string | null
+          file_name: string
+          file_type: string
+          file_url?: string | null
+          id?: string
+          profile_id?: string | null
+        }
+        Update: {
+          download_date?: string | null
+          file_name?: string
+          file_type?: string
+          file_url?: string | null
+          id?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_downloads_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_history: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          created_at: string | null
+          id: string
+          profile_id: string | null
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          profile_id?: string | null
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -461,6 +528,33 @@ export type Database = {
           notification_type?: string
           read?: boolean
           title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          profile_name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          profile_name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          profile_name?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
