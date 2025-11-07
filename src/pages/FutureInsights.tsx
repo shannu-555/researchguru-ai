@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import MarketPulseIndex from "@/components/MarketPulseIndex";
 import CrossMarketCorrelation from "@/components/CrossMarketCorrelation";
 import ConsumerPersonaPredictor from "@/components/ConsumerPersonaPredictor";
+import ScenarioSimulator from "@/components/ScenarioSimulator";
 import ProjectSelector from "@/components/ProjectSelector";
 
 export default function FutureInsights() {
@@ -39,6 +40,8 @@ export default function FutureInsights() {
         <CrossMarketCorrelation key={`correlation-${refreshKey}`} projectId={selectedProjectId} />
         <ConsumerPersonaPredictor key={`personas-${refreshKey}`} projectId={selectedProjectId} />
       </div>
+
+      <ScenarioSimulator projectId={selectedProjectId} />
     </div>
   );
 }

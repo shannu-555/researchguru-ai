@@ -31,11 +31,11 @@ serve(async (req) => {
 
     // Handle different insight types (no projectId needed for these)
     if (type === 'market-pulse') {
-      return await generateMarketPulse(LOVABLE_API_KEY);
+      return await generateMarketPulse(LOVABLE_API_KEY, projectId);
     } else if (type === 'market-correlation') {
-      return await generateMarketCorrelation(LOVABLE_API_KEY);
+      return await generateMarketCorrelation(LOVABLE_API_KEY, projectId);
     } else if (type === 'consumer-personas') {
-      return await generateConsumerPersonas(LOVABLE_API_KEY);
+      return await generateConsumerPersonas(LOVABLE_API_KEY, projectId);
     }
 
     // Original project-based insights flow
@@ -194,7 +194,7 @@ Provide structured JSON output with: keyFindings (array), sentimentAnalysis (obj
   }
 });
 
-async function generateMarketPulse(apiKey: string) {
+async function generateMarketPulse(apiKey: string, projectId?: string) {
   try {
     // Create Supabase client to fetch real data
     const supabaseClient = createClient(
@@ -202,13 +202,20 @@ async function generateMarketPulse(apiKey: string) {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch recent agent results
-    const { data: agentResults, error: resultsError } = await supabaseClient
+    // Fetch agent results - project-specific if projectId provided
+    let query = supabaseClient
       .from('agent_results')
-      .select('*')
+      .select('*, research_projects(product_name, company_name)')
       .eq('status', 'completed')
-      .order('created_at', { ascending: false })
-      .limit(10);
+      .order('created_at', { ascending: false });
+    
+    if (projectId) {
+      query = query.eq('project_id', projectId).limit(20);
+    } else {
+      query = query.limit(10);
+    }
+
+    const { data: agentResults, error: resultsError } = await query;
 
     if (resultsError) throw resultsError;
 
@@ -265,14 +272,20 @@ async function generateMarketPulse(apiKey: string) {
       (sentimentScore * 0.4) + (competitionScore * 0.3) + (trendScore * 0.3)
     );
 
-    // Generate AI summary based on real data
-    const summaryPrompt = `Based on this market data, generate a one-sentence summary:
+    // Get product context
+    const productContext = projectId && agentResults.length > 0 
+      ? `for ${agentResults[0].research_projects?.product_name || 'this product'} by ${agentResults[0].research_projects?.company_name || 'the company'}`
+      : 'across analyzed products';
+
+    // Generate AI summary based on real data with unique context
+    const summaryPrompt = `Analyze this market data ${productContext} and generate ONE unique, specific sentence:
 - Sentiment Score: ${sentimentScore}/100 (${sentimentScore > 60 ? 'positive' : sentimentScore < 40 ? 'negative' : 'neutral'})
 - Competition Score: ${competitionScore}/100
 - Trend Score: ${trendScore}/100
 - Overall Market Pulse: ${overallScore}/100
+- Timestamp: ${new Date().toISOString()}
 
-Create a brief, business-focused summary highlighting the market momentum.`;
+Create a UNIQUE, contextual summary that reflects the specific product/market conditions. Avoid generic phrases. Include specific insights about momentum, consumer response, or competitive position.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -329,7 +342,7 @@ Create a brief, business-focused summary highlighting the market momentum.`;
   }
 }
 
-async function generateMarketCorrelation(apiKey: string) {
+async function generateMarketCorrelation(apiKey: string, projectId?: string) {
   try {
     // Create Supabase client to fetch real data
     const supabaseClient = createClient(
@@ -337,12 +350,35 @@ async function generateMarketCorrelation(apiKey: string) {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch recent projects and their results
-    const { data: projects, error: projectsError } = await supabaseClient
+    // Fetch projects - prioritize current project if provided
+    let projectsQuery = supabaseClient
       .from('research_projects')
       .select('id, product_name, company_name')
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false });
+    
+    if (projectId) {
+      // Get current project + 4 others for comparison
+      const { data: currentProject } = await supabaseClient
+        .from('research_projects')
+        .select('id, product_name, company_name')
+        .eq('id', projectId)
+        .single();
+      
+      const { data: otherProjects } = await supabaseClient
+        .from('research_projects')
+        .select('id, product_name, company_name')
+        .neq('id', projectId)
+        .limit(4);
+      
+      const projects = currentProject ? [currentProject, ...(otherProjects || [])] : otherProjects;
+      if (!projects || projects.length < 2) {
+        return generateDefaultCorrelations();
+      }
+      
+      return await analyzeProjectCorrelations(apiKey, supabaseClient, projects);
+    }
+
+    const { data: projects, error: projectsError } = await projectsQuery.limit(5);
 
     if (projectsError) throw projectsError;
 
@@ -385,15 +421,20 @@ async function generateMarketCorrelation(apiKey: string) {
       };
     });
 
-    const prompt = `Analyze these products and identify 3-4 meaningful correlations or relationships:
+    const timestamp = new Date().toISOString();
+    const prompt = `As a market analyst, identify 3-4 UNIQUE, SPECIFIC correlations between these products:
 ${JSON.stringify(projectsData, null, 2)}
 
-For each correlation, provide:
-- market1 and market2 names (product categories or market segments)
-- correlation score (-1 to 1, where 1 is strong positive correlation)
-- insight explaining the relationship
+Analysis timestamp: ${timestamp}
 
-Return as JSON array with format: [{"market1": "X", "market2": "Y", "correlation": 0.X, "insight": "..."}]`;
+Requirements:
+1. Calculate REAL correlation coefficients based on actual sentiment scores and market data
+2. Identify cross-market patterns (e.g., price sensitivity, feature preferences, brand loyalty)
+3. Provide SPECIFIC insights unique to these exact products
+4. Consider: sentiment alignment, competitive positioning, consumer demographics
+5. Avoid generic statements - be specific to these products
+
+Return ONLY a JSON array: [{"market1": "Product/Category Name", "market2": "Product/Category Name", "correlation": <-1 to 1>, "insight": "Specific finding about relationship"}]`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -464,7 +505,7 @@ Return as JSON array with format: [{"market1": "X", "market2": "Y", "correlation
   }
 }
 
-async function generateConsumerPersonas(apiKey: string) {
+async function generateConsumerPersonas(apiKey: string, projectId?: string) {
   try {
     // Create Supabase client to fetch real data
     const supabaseClient = createClient(
@@ -472,13 +513,20 @@ async function generateConsumerPersonas(apiKey: string) {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch recent sentiment and competitor data
-    const { data: agentResults } = await supabaseClient
+    // Fetch agent results - project-specific if provided
+    let query = supabaseClient
       .from('agent_results')
-      .select('*')
+      .select('*, research_projects(product_name, company_name)')
       .eq('status', 'completed')
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false });
+    
+    if (projectId) {
+      query = query.eq('project_id', projectId).limit(10);
+    } else {
+      query = query.limit(5);
+    }
+
+    const { data: agentResults } = await query;
 
     if (!agentResults || agentResults.length === 0) {
       // Return default personas if no data
@@ -512,18 +560,30 @@ async function generateConsumerPersonas(apiKey: string) {
       ? sentimentData.reduce((sum, r) => sum + (r.results?.negative || 0), 0) / sentimentData.length
       : 20;
 
-    // Generate AI-powered personas based on real market data
-    const prompt = `Based on this market sentiment data (Positive: ${avgPositive}%, Negative: ${avgNegative}%), generate 3 distinct consumer personas.
+    // Get product context
+    const productContext = projectId && agentResults.length > 0 
+      ? `for ${agentResults[0].research_projects?.product_name || 'this product'} by ${agentResults[0].research_projects?.company_name || 'the company'}`
+      : 'based on market research data';
+
+    // Generate AI-powered personas based on real market data with timestamp for uniqueness
+    const timestamp = new Date().toISOString();
+    const prompt = `Analyze consumer behavior ${productContext} with this sentiment data (Positive: ${avgPositive}%, Negative: ${avgNegative}%).
+Analysis timestamp: ${timestamp}
+
+Generate 3 UNIQUE, SPECIFIC consumer personas that reflect the actual market sentiment. Consider:
+- How different consumer types would react to this specific product
+- The sentiment scores indicate the market's actual reception
+- Realistic behavioral predictions based on market data
 
 For each persona provide:
-- name: A descriptive persona name
-- description: 2-sentence description of this consumer type
-- icon: An emoji that represents them
-- priceImpact: How they react to 10% price increase (-20 to +5)
-- featureImpact: How they react to feature removal (-25 to 0)
-- launchImpact: How they react to new product launch (0 to +30)
+- name: A descriptive, unique persona name (not generic)
+- description: 2-3 sentences describing this specific consumer type and their relationship to this product category
+- icon: An appropriate emoji
+- priceImpact: Realistic reaction to 10% price increase (-20 to +5)
+- featureImpact: Realistic reaction to feature removal (-25 to 0)
+- launchImpact: Realistic reaction to new product launch (0 to +30)
 
-Return as JSON array only.`;
+Return ONLY a valid JSON array. Make each persona distinct and relevant to the actual sentiment data.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -644,4 +704,108 @@ Return as JSON array only.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+}
+
+// Helper function for default correlations
+function generateDefaultCorrelations() {
+  return new Response(
+    JSON.stringify({ 
+      correlations: [
+        {
+          market1: 'Market Analysis',
+          market2: 'Consumer Trends',
+          correlation: 0.75,
+          insight: 'Analyze more products to discover cross-market relationships and correlations.'
+        }
+      ]
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Helper function to analyze project correlations
+async function analyzeProjectCorrelations(apiKey: string, supabaseClient: any, projects: any[]) {
+  const projectIds = projects.map(p => p.id);
+  const { data: agentResults } = await supabaseClient
+    .from('agent_results')
+    .select('*')
+    .in('project_id', projectIds)
+    .eq('status', 'completed');
+
+  const projectsData = projects.map(p => {
+    const results = agentResults?.filter((r: any) => r.project_id === p.id) || [];
+    const sentiment = results.find((r: any) => r.agent_type === 'sentiment')?.results;
+    const competitor = results.find((r: any) => r.agent_type === 'competitor')?.results;
+    
+    return {
+      name: p.product_name,
+      company: p.company_name,
+      sentimentScore: sentiment?.overallScore || 0,
+      competitorCount: competitor?.competitors?.length || 0
+    };
+  });
+
+  const timestamp = new Date().toISOString();
+  const prompt = `As a market analyst, identify 3-4 UNIQUE, SPECIFIC correlations between these products:
+${JSON.stringify(projectsData, null, 2)}
+
+Analysis timestamp: ${timestamp}
+
+Requirements:
+1. Calculate REAL correlation coefficients based on actual sentiment scores and market data
+2. Identify cross-market patterns (e.g., price sensitivity, feature preferences, brand loyalty)
+3. Provide SPECIFIC insights unique to these exact products
+4. Consider: sentiment alignment, competitive positioning, consumer demographics
+5. Avoid generic statements - be specific to these products
+
+Return ONLY a JSON array: [{"market1": "Product/Category Name", "market2": "Product/Category Name", "correlation": <-1 to 1>, "insight": "Specific finding about relationship"}]`;
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a market correlation analyst. Return valid JSON only.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+    }),
+  });
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  
+  let correlations;
+  try {
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    correlations = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+  } catch {
+    correlations = [];
+  }
+
+  if (correlations.length < 2) {
+    correlations = [
+      {
+        market1: projects[0]?.product_name || 'Product A',
+        market2: projects[1]?.product_name || 'Product B',
+        correlation: 0.65,
+        insight: 'Both products show similar consumer sentiment patterns and market positioning.'
+      },
+      ...correlations
+    ];
+  }
+
+  return new Response(
+    JSON.stringify({ correlations: correlations.slice(0, 4) }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
 }
