@@ -9,7 +9,10 @@ import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Research from "./pages/Research";
 import Comparison from "./pages/Comparison";
-import FutureInsights from "./pages/FutureInsights";
+import MarketPulse from "./pages/MarketPulse";
+import CrossMarket from "./pages/CrossMarket";
+import ConsumerPersona from "./pages/ConsumerPersona";
+import ScenarioSimulator from "./pages/ScenarioSimulator";
 import MyNotes from "./pages/MyNotes";
 import AIAssistant from "./pages/AIAssistant";
 import EnhancedSettings from "./pages/EnhancedSettings";
@@ -58,9 +61,12 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/research" element={<Research />} />
                 <Route path="/comparison" element={<Comparison />} />
-                <Route path="/future-insights" element={<FutureInsights />} />
-                <Route path="/notes" element={<MyNotes />} />
-                <Route path="/assistant" element={<AIAssistant />} />
+                <Route path="/ai-assistant" element={<AIAssistant />} />
+                <Route path="/market-pulse" element={<MarketPulse />} />
+                <Route path="/cross-market" element={<CrossMarket />} />
+                <Route path="/consumer-persona" element={<ConsumerPersona />} />
+                <Route path="/scenario-simulator" element={<ScenarioSimulator />} />
+                <Route path="/my-notes" element={<MyNotes />} />
                 <Route path="/settings" element={<EnhancedSettings />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/admin/analytics" element={<AdminAnalytics />} />

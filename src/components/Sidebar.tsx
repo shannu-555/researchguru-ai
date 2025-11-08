@@ -1,4 +1,4 @@
-import { Activity, TrendingUp, Users, Target, Menu } from "lucide-react";
+import { Activity, TrendingUp, Users, Target, Menu, LineChart, BarChart3, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar as SidebarUI,
@@ -13,11 +13,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const aiFeatures = [
-  { title: "Market Pulse Index", url: "/future-insights#pulse", icon: Activity },
-  { title: "Cross-Market Correlation", url: "/future-insights#correlation", icon: TrendingUp },
-  { title: "Consumer Persona Predictor", url: "/future-insights#personas", icon: Users },
-  { title: "Scenario Simulator", url: "/future-insights#simulator", icon: Target },
+const menuItems = [
+  { title: "Product Research", url: "/research", icon: LineChart },
+  { title: "Comparison", url: "/comparison", icon: BarChart3 },
+  { title: "AI Assistant", url: "/ai-assistant", icon: MessageSquare },
+  { title: "Market Pulse Index", url: "/market-pulse", icon: Activity },
+  { title: "Cross-Market Correlation", url: "/cross-market", icon: TrendingUp },
+  { title: "Consumer Persona Predictor", url: "/consumer-persona", icon: Users },
+  { title: "Scenario Simulator", url: "/scenario-simulator", icon: Target },
 ];
 
 export function Sidebar() {
@@ -28,7 +31,7 @@ export function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {open && (
           <h2 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
-            AI Features
+            Menu
           </h2>
         )}
         <SidebarTrigger className="ml-auto">
@@ -39,17 +42,17 @@ export function Sidebar() {
       <SidebarContent className="flex flex-col h-full">
         <SidebarGroup className="flex-1">
           <SidebarGroupLabel className={!open ? "sr-only" : ""}>
-            AI-Powered Analytics
+            Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {aiFeatures.map((item) => (
+            <SidebarMenu className="space-y-1">
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                        `flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
                           isActive
                             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             : "hover:bg-sidebar-accent/50"
@@ -57,7 +60,7 @@ export function Sidebar() {
                       }
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {open && <span>{item.title}</span>}
+                      {open && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

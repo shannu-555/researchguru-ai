@@ -11,9 +11,6 @@ export const AppLayout = () => {
   
   const topNavItems = [
     { title: "Dashboard", url: "/", icon: Home },
-    { title: "Research", url: "/research", icon: LineChart },
-    { title: "AI Assistant", url: "/ai-assistant", icon: MessageSquare },
-    { title: "Comparison", url: "/comparison", icon: BarChart3 },
     { title: "My Notes", url: "/my-notes", icon: FileText },
     { title: "Settings", url: "/settings", icon: Settings },
   ];
