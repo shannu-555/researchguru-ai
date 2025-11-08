@@ -604,6 +604,80 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_annotations: {
+        Row: {
+          annotation_text: string
+          annotation_type: string
+          created_at: string
+          id: string
+          position_data: Json | null
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          annotation_text: string
+          annotation_type?: string
+          created_at?: string
+          id?: string
+          position_data?: Json | null
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          annotation_text?: string
+          annotation_type?: string
+          created_at?: string
+          id?: string
+          position_data?: Json | null
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_annotations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "research_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_collaborators: {
+        Row: {
+          accepted_at: string | null
+          collaborator_email: string
+          collaborator_user_id: string | null
+          id: string
+          invited_at: string
+          role: string
+          status: string
+          workspace_owner_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          collaborator_email: string
+          collaborator_user_id?: string | null
+          id?: string
+          invited_at?: string
+          role?: string
+          status?: string
+          workspace_owner_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          collaborator_email?: string
+          collaborator_user_id?: string | null
+          id?: string
+          invited_at?: string
+          role?: string
+          status?: string
+          workspace_owner_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
