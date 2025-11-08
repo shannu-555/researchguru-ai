@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { InsightsSummary } from "@/components/InsightsSummary";
+import { AgentMetricsCalculator } from "@/components/AgentMetricsCalculator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -444,6 +445,8 @@ export default function Research() {
           {currentProjectId && (
             <InsightsSummary projectId={currentProjectId} />
           )}
+
+          <AgentMetricsCalculator agentOutcomes={agentOutcomes} />
         </>
       )}
     </div>
