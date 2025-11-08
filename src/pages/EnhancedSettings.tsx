@@ -8,6 +8,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useTheme } from "next-themes";
+import { WorkspaceCollaboration } from "@/components/WorkspaceCollaboration";
 
 export default function EnhancedSettings() {
   const { toast } = useToast();
@@ -67,6 +68,8 @@ export default function EnhancedSettings() {
           Configure your application preferences and API integrations
         </p>
       </div>
+
+      <WorkspaceCollaboration />
 
       <Accordion type="multiple" className="space-y-4" defaultValue={["agents", "theme"]}>
         {/* Agent Controls */}
