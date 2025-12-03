@@ -194,23 +194,38 @@ Provide structured JSON output with: keyFindings (array), sentimentAnalysis (obj
   }
 });
 
-// Helper function to call Gemini API directly
-async function callGeminiDirect(prompt: string, apiKey: string): Promise<string> {
+// Helper function to call Gemini API directly with retries
+async function callGeminiDirect(prompt: string, apiKey: string, retryCount = 0): Promise<string> {
+  const maxRetries = 3;
+  const backoffMs = Math.pow(2, retryCount) * 1000;
+  
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
       }),
     }
   );
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Gemini API error:', response.status, errorText);
+    console.error('Gemini API error:', response.status, errorText.substring(0, 200));
+    
+    if (response.status === 429 && retryCount < maxRetries) {
+      console.log(`Rate limited, retrying in ${backoffMs}ms`);
+      await new Promise(resolve => setTimeout(resolve, backoffMs));
+      return callGeminiDirect(prompt, apiKey, retryCount + 1);
+    }
+    if (response.status === 429) {
+      throw new Error('API rate limit exceeded. Please try again later.');
+    }
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      throw new Error('Invalid Gemini API key — update it in API Key Management.');
+    }
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
