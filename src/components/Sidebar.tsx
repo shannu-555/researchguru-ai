@@ -1,4 +1,4 @@
-import { TrendingUp, Users, Target, Menu, LineChart, BarChart3, MessageSquare } from "lucide-react";
+import { TrendingUp, Users, Target, Menu, LineChart, BarChart3, MessageSquare, Lightbulb } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar as SidebarUI,
@@ -16,6 +16,7 @@ import {
 const menuItems = [
   { title: "Product Research", url: "/research", icon: LineChart },
   { title: "Comparison", url: "/comparison", icon: BarChart3 },
+  { title: "AI Insights Center", url: "/ai-insights", icon: Lightbulb },
   { title: "AI Assistant", url: "/ai-assistant", icon: MessageSquare },
   { title: "Cross-Market Correlation", url: "/cross-market", icon: TrendingUp },
   { title: "Consumer Persona Predictor", url: "/consumer-persona", icon: Users },
