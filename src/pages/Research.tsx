@@ -196,19 +196,21 @@ export default function Research() {
         trend: "In Progress",
       });
 
-      const { data, error } = await supabase.functions.invoke('run-agents', {
+      // Use the new orchestration pipeline for comprehensive research
+      const { data, error } = await supabase.functions.invoke('orchestrate-research', {
         body: {
           productName,
           companyName,
           description,
           projectId: project.id,
+          userId: user?.id,
           userGeminiKey: userGeminiKey,
         }
       });
 
       if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Edge function returned an error');
+        console.error('Orchestration error:', error);
+        throw new Error(error.message || 'Research orchestration failed');
       }
 
       if (data?.error) {
@@ -220,6 +222,11 @@ export default function Research() {
         competitor: "Completed",
         trend: "Completed",
       });
+
+      // Show pipeline status in toast
+      const pipeline = data?.pipeline;
+      const feedbackMsg = data?.feedbackLoopTriggered ? ' (additional data collected via feedback loop)' : '';
+      const embeddingsMsg = data?.embeddingsCount > 0 ? ` | ${data.embeddingsCount} vectors stored` : '';
 
       const { data: agentResults, error: resultsError } = await supabase
         .from('agent_results')
@@ -234,14 +241,9 @@ export default function Research() {
         setAgentOutcomes(outcomes);
       }
 
-      await supabase
-        .from('research_projects')
-        .update({ status: 'completed' })
-        .eq('id', project.id);
-
       toast({
-        title: "Research completed",
-        description: "All agents have finished analyzing. Check the outcomes below.",
+        title: "Research Pipeline Completed",
+        description: `Agents completed${feedbackMsg}${embeddingsMsg}. Check the outcomes below.`,
       });
 
       setProductName("");
