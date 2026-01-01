@@ -25,15 +25,18 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine which API to use - prioritize GEMINI_API_KEY
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || null;
+    // Determine which API to use - prioritize Lovable AI Gateway (more reliable)
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || null;
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || null;
     
-    // Use user-provided key, then server GEMINI key, then Lovable AI as fallback
+    // Use Lovable AI as primary, fall back to user-provided Gemini key
     const geminiKey = userGeminiKey?.trim() || GEMINI_API_KEY;
-    const useGemini = geminiKey && geminiKey.length > 0;
     
-    // Validate Gemini API key if using it
+    // Prioritize Lovable AI Gateway for reliability
+    const useLovableAI = LOVABLE_API_KEY && LOVABLE_API_KEY.length > 0;
+    const useGemini = !useLovableAI && geminiKey && geminiKey.length > 0;
+    
+    // Only validate Gemini API key if we're using it as primary
     if (useGemini) {
       const isValid = await validateGeminiKey(geminiKey);
       if (!isValid) {
@@ -48,13 +51,13 @@ serve(async (req) => {
       }
     }
     
-    console.log('Using API:', useGemini ? 'Gemini API Direct (validated)' : 'Lovable AI Gateway');
+    console.log('Using API:', useLovableAI ? 'Lovable AI Gateway (primary)' : useGemini ? 'Gemini API Direct' : 'No API available');
 
-    // Run all agents in parallel
+    // Run all agents in parallel - pass Lovable API key as primary
     const [sentimentResult, competitorResult, trendResult] = await Promise.allSettled([
-      runSentimentAgent(productName, companyName, useGemini ? geminiKey : null, LOVABLE_API_KEY),
-      runCompetitorAgent(productName, companyName, useGemini ? geminiKey : null, LOVABLE_API_KEY),
-      runTrendAgent(productName, companyName, useGemini ? geminiKey : null, LOVABLE_API_KEY),
+      runSentimentAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
+      runCompetitorAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
+      runTrendAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
     ]);
 
     // Store results in database
@@ -240,46 +243,68 @@ async function callGeminiDirect(prompt, geminiKey, retryCount = 0) {
   return data.candidates[0].content.parts[0].text;
 }
 
-async function runSentimentAgent(productName, companyName, userGeminiKey, lovableApiKey) {
+async function runSentimentAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
   console.log('Running sentiment agent for:', productName);
   
-  const prompt = `Analyze the sentiment for the product "${productName}" by ${companyName || 'the company'}.
+  const productContext = description ? `Product description: ${description}` : '';
+  
+  const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
+${productContext}
 
-CRITICAL REQUIREMENTS:
-1. Provide GROUNDED sentiment analysis based on realistic market patterns for this specific product category
-2. Include source evidence snippets that justify each sentiment claim
-3. Calculate confidence score based on data availability
+IMPORTANT SCORING METHODOLOGY:
+1. Overall Score Calculation (0-100):
+   - Base score from general market reception: 50
+   - Add/subtract based on: review ratings (+/-20), social media sentiment (+/-15), news coverage (+/-10), brand reputation (+/-5)
+   - Weight product-specific keywords 40% higher in sentiment calculation
+   
+2. Sentiment Distribution (must sum to exactly 100%):
+   - Analyze actual review distributions and social mentions
+   - Positive: percentage of favorable mentions/reviews
+   - Negative: percentage of critical mentions/reviews  
+   - Neutral: percentage of balanced/informational mentions
 
-Provide analysis with:
-- Overall sentiment score (0-100) with justification
-- Positive percentage (must sum to 100 with negative and neutral)
-- Negative percentage
-- Neutral percentage
-- Key positive themes (3-5) with supporting evidence snippets
-- Key negative themes (3-5) with supporting evidence snippets
-- Sample reviews (5 realistic reviews with ratings 1-5)
-- Confidence score (0-100) based on: data completeness, source reliability
-- Confidence level: "High" if score >= 70, "Medium" if >= 40, "Low" otherwise
-- Source domains used for analysis (e.g., "amazon.com reviews", "tech forums", "social media")
+3. Evidence Requirements:
+   - Each theme must have supporting evidence from real sources
+   - Include specific quotes or paraphrased feedback
 
-If evidence is weak or contradictory, mark sentiment as "Mixed / Low Confidence".
+Provide comprehensive analysis as JSON:
+{
+  "overallScore": <number 0-100, calculated using methodology above>,
+  "scoreBreakdown": {
+    "reviewRatings": <contribution from reviews -20 to +20>,
+    "socialSentiment": <contribution from social -15 to +15>,
+    "newsCoverage": <contribution from news -10 to +10>,
+    "brandReputation": <contribution from brand -5 to +5>
+  },
+  "positive": <percentage, integer>,
+  "negative": <percentage, integer>,
+  "neutral": <percentage, integer>,
+  "positiveThemes": [{"theme": "...", "evidence": "...", "strength": "strong/moderate/weak"}],
+  "negativeThemes": [{"theme": "...", "evidence": "...", "strength": "strong/moderate/weak"}],
+  "reviews": [{"rating": 1-5, "text": "...", "source": "..."}],
+  "confidence": <0-100>,
+  "confidenceLevel": "High/Medium/Low",
+  "sourceDomains": ["domain1.com", "domain2.com"],
+  "methodology": "Brief explanation of how score was calculated"
+}
 
-Format as JSON with fields: overallScore, positive, negative, neutral, positiveThemes, negativeThemes, reviews, confidence, confidenceLevel, sourceDomains, evidenceSnippets
-Only respond with valid JSON, no markdown.`;
+Only respond with valid JSON, no markdown or explanations.`;
 
   try {
     let content;
-    if (userGeminiKey) {
-      content = await callGeminiDirect('You are a market research analyst specializing in consumer sentiment. Provide grounded, evidence-based analysis. ' + prompt, userGeminiKey);
+    if (lovableApiKey) {
+      content = await callLovableAI(prompt, 'You are a market research analyst specializing in consumer sentiment. Calculate scores using the exact methodology provided. Always respond with valid JSON only.', lovableApiKey);
+    } else if (userGeminiKey) {
+      content = await callGeminiDirect('You are a market research analyst. Calculate scores using the exact methodology provided. ' + prompt, userGeminiKey);
     } else {
-      content = await callLovableAI(prompt, 'You are a market research analyst. Provide grounded, evidence-based analysis. Always respond with valid JSON only.', lovableApiKey);
+      throw new Error('No API key available');
     }
 
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const result = JSON.parse(jsonMatch[0]);
       
-      // Validate and normalize percentages
+      // Validate and normalize percentages to exactly 100
       const total = (result.positive || 0) + (result.negative || 0) + (result.neutral || 0);
       if (total !== 100 && total > 0) {
         const factor = 100 / total;
@@ -288,9 +313,13 @@ Only respond with valid JSON, no markdown.`;
         result.neutral = 100 - result.positive - result.negative;
       }
       
+      // Validate overall score is within bounds
+      if (result.overallScore < 0) result.overallScore = 0;
+      if (result.overallScore > 100) result.overallScore = 100;
+      
       // Ensure confidence fields exist
       if (!result.confidence) {
-        result.confidence = result.sourceDomains?.length > 0 ? 65 : 40;
+        result.confidence = result.sourceDomains?.length > 2 ? 75 : result.sourceDomains?.length > 0 ? 55 : 35;
       }
       if (!result.confidenceLevel) {
         result.confidenceLevel = result.confidence >= 70 ? 'High' : result.confidence >= 40 ? 'Medium' : 'Low';
@@ -306,129 +335,113 @@ Only respond with valid JSON, no markdown.`;
       positive: 40,
       negative: 30,
       neutral: 30,
-      positiveThemes: ['Product features', 'Design', 'Brand reputation'],
-      negativeThemes: ['Price concerns', 'Availability'],
-      reviews: [
-        { rating: 4, text: 'Good product overall' },
-        { rating: 3, text: 'Average experience' },
-        { rating: 4, text: 'Worth the price' },
-        { rating: 2, text: 'Some issues' },
-        { rating: 3, text: 'Decent choice' },
-      ],
-      confidence: 25,
+      positiveThemes: [{ theme: 'Product features', evidence: 'General market feedback', strength: 'weak' }],
+      negativeThemes: [{ theme: 'Data unavailable', evidence: 'Unable to fetch sentiment data', strength: 'weak' }],
+      reviews: [],
+      confidence: 15,
       confidenceLevel: 'Low',
       sourceDomains: [],
-      evidenceSnippets: [],
       _fallback: true,
       _error: error instanceof Error ? error.message : 'Unknown error',
-      _diagnostics: 'Sentiment analysis unavailable — low confidence due to API error'
+      _diagnostics: 'Sentiment analysis unavailable — using fallback due to API error'
     };
   }
 }
 
-async function runCompetitorAgent(productName, companyName, userGeminiKey, lovableApiKey) {
+async function runCompetitorAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
   console.log('Running competitor agent for:', productName);
   
-  const prompt = `Analyze competitors for "${productName}" by ${companyName || 'the company'}.
+  const productContext = description ? `Product context: ${description}` : '';
+  
+  const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
+${productContext}
 
 CRITICAL REQUIREMENTS:
-1. Only include REAL, VERIFIED competitor products that actually exist in the market
-2. Prices must be realistic and grounded - if exact price unknown, provide a validated price range
-3. Include source evidence for price claims
-4. Calculate confidence score for each competitor based on data reliability
+1. ONLY include REAL products that ACTUALLY EXIST and compete directly with this product
+2. Research the EXACT product category - if it's wireless earbuds, find other wireless earbuds; if it's a smartphone, find other smartphones
+3. Include competitors from the same price segment and market positioning
+4. Prices must be realistic current market prices in USD
 
-Provide 3-5 REAL competitor products with:
-- name: actual, verified competitor product name (no made-up products)
-- company: real company name
-- price: validated price in USD (format: "$XX.XX" or "Price unavailable")
-- priceSource: source domain where price was found (e.g., "amazon.com", "bestbuy.com")
-- priceConfidence: 0-100 score based on: number of sources, recency, match accuracy
-- rating: verified rating out of 5 (or null if unavailable)
-- features: 3-5 verified key features
-- advantages: 2-3 evidence-based points
-- disadvantages: 2-3 evidence-based points
-- marketShare: estimated percentage (or null if unknown)
-- sourceEvidence: short snippet supporting the data
+For "${productName}", identify 4-6 direct competitors with:
+- name: The EXACT real product name (e.g., "Sony WF-C500", "JBL Tune 130NC", "Samsung Galaxy Buds FE")
+- company: The actual manufacturer
+- price: Current retail price in USD (format: "$XX.XX")
+- priceRange: {"min": XX, "max": XX} if price varies
+- rating: Average rating out of 5 from major retailers
+- features: 4-5 key features that this product has
+- advantages: 2-3 advantages over "${productName}"
+- disadvantages: 2-3 disadvantages compared to "${productName}"
+- targetMarket: Who this product is designed for
+- marketPosition: "budget", "mid-range", or "premium"
 
-Price validation rules:
-- Strip currency symbols, clean formatting
-- Remove promotional/bundle prices
-- If multiple sources show different prices, use median
-- If price cannot be verified, return "Price unavailable — low confidence"
+Return as JSON:
+{
+  "competitors": [...],
+  "productCategory": "<category of the analyzed product>",
+  "marketSegment": "<price/market segment>",
+  "analysisDate": "<current date>",
+  "overallConfidence": <0-100>
+}
 
-Format as JSON array. Only respond with valid JSON array, no markdown.`;
+Only respond with valid JSON, no markdown.`;
 
   try {
     let content;
-    if (userGeminiKey) {
-      content = await callGeminiDirect('You are a market research analyst. Provide only verified, grounded competitor data. ' + prompt, userGeminiKey);
+    if (lovableApiKey) {
+      content = await callLovableAI(prompt, 'You are a competitive intelligence analyst. Only provide verified, real competitor products. Always respond with valid JSON.', lovableApiKey);
+    } else if (userGeminiKey) {
+      content = await callGeminiDirect('You are a competitive intelligence analyst. Only provide verified, real competitor products. ' + prompt, userGeminiKey);
     } else {
-      content = await callLovableAI(prompt, 'You are a market research analyst. Provide only verified, grounded data. Always respond with valid JSON array.', lovableApiKey);
+      throw new Error('No API key available');
     }
 
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const competitors = JSON.parse(jsonMatch[0]);
+      const result = JSON.parse(jsonMatch[0]);
       
-      // Validate and normalize competitor data
-      const validatedCompetitors = competitors.map(comp => {
-        // Clean and validate price
-        let cleanPrice = comp.price;
-        let priceConfidence = comp.priceConfidence || 50;
-        
-        if (typeof cleanPrice === 'string') {
-          // Remove promotional text
-          if (/bundle|emi|offer|from/i.test(cleanPrice)) {
-            cleanPrice = 'Price unavailable — promotional pricing detected';
-            priceConfidence = 20;
+      // Validate competitor data
+      if (result.competitors && Array.isArray(result.competitors)) {
+        result.competitors = result.competitors.map(comp => {
+          // Clean price format
+          let cleanPrice = comp.price;
+          if (typeof cleanPrice === 'number') {
+            cleanPrice = `$${cleanPrice.toFixed(2)}`;
           }
-        }
+          
+          // Calculate confidence for each competitor
+          const hasPrice = cleanPrice && !String(cleanPrice).includes('unavailable');
+          const hasFeatures = comp.features?.length >= 3;
+          const hasRating = comp.rating && comp.rating > 0;
+          const confidence = (hasPrice ? 40 : 0) + (hasFeatures ? 30 : 0) + (hasRating ? 30 : 0);
+          
+          return {
+            ...comp,
+            price: cleanPrice,
+            confidenceLevel: confidence >= 70 ? 'High' : confidence >= 40 ? 'Medium' : 'Low'
+          };
+        });
         
         // Calculate overall confidence
-        const hasValidPrice = cleanPrice && !cleanPrice.includes('unavailable');
-        const hasSource = comp.priceSource && comp.priceSource.length > 0;
-        const confidence = Math.round(
-          (hasValidPrice ? 40 : 0) + 
-          (hasSource ? 30 : 0) + 
-          (comp.rating ? 15 : 0) + 
-          (comp.features?.length >= 3 ? 15 : 0)
-        );
-        
-        return {
-          ...comp,
-          price: cleanPrice,
-          priceConfidence: Math.min(priceConfidence, confidence),
-          confidenceLevel: confidence >= 70 ? 'High' : confidence >= 40 ? 'Medium' : 'Low',
-          sourceEvidence: comp.sourceEvidence || 'No source evidence available'
-        };
-      });
+        if (!result.overallConfidence) {
+          result.overallConfidence = Math.round(
+            result.competitors.reduce((sum, c) => {
+              const conf = c.confidenceLevel === 'High' ? 85 : c.confidenceLevel === 'Medium' ? 55 : 25;
+              return sum + conf;
+            }, 0) / result.competitors.length
+          );
+        }
+      }
       
-      return { 
-        competitors: validatedCompetitors,
-        overallConfidence: Math.round(validatedCompetitors.reduce((sum, c) => sum + (c.priceConfidence || 0), 0) / validatedCompetitors.length),
-        sourceDomains: [...new Set(validatedCompetitors.map(c => c.priceSource).filter(Boolean))]
-      };
+      return result;
     }
-    throw new Error('No valid JSON array found in competitor response');
+    throw new Error('No valid JSON found in competitor response');
   } catch (error) {
     console.error('Competitor agent error:', error);
     return {
-      competitors: [{
-        name: 'Unable to fetch competitors',
-        company: 'N/A',
-        price: 'Price unavailable — low confidence',
-        priceSource: null,
-        priceConfidence: 0,
-        rating: null,
-        features: [],
-        advantages: [],
-        disadvantages: [],
-        marketShare: null,
-        sourceEvidence: 'No data available',
-        confidenceLevel: 'Low'
-      }],
+      competitors: [],
+      productCategory: 'Unknown',
+      marketSegment: 'Unknown',
       overallConfidence: 0,
-      sourceDomains: [],
       _fallback: true,
       _error: error instanceof Error ? error.message : 'Unknown error',
       _diagnostics: `Competitor analysis failed — ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -436,12 +449,14 @@ Format as JSON array. Only respond with valid JSON array, no markdown.`;
   }
 }
 
-async function runTrendAgent(productName, companyName, userGeminiKey, lovableApiKey) {
+async function runTrendAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
   console.log('Running trend agent for:', productName);
   
   const currentDate = new Date().toISOString().split('T')[0];
+  const productContext = description ? `Product context: ${description}` : '';
   
   const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
+${productContext}
 
 CRITICAL REQUIREMENTS:
 1. Provide GROUNDED trend analysis based on realistic market data
@@ -486,10 +501,12 @@ Only respond with valid JSON, no markdown.`;
 
   try {
     let content;
-    if (userGeminiKey) {
+    if (lovableApiKey) {
+      content = await callLovableAI(prompt, 'You are a market trend analyst. Provide grounded analysis. Always respond with valid JSON.', lovableApiKey);
+    } else if (userGeminiKey) {
       content = await callGeminiDirect('You are a market trend analyst. Provide grounded, evidence-based analysis. ' + prompt, userGeminiKey);
     } else {
-      content = await callLovableAI(prompt, 'You are a market trend analyst. Provide grounded analysis. Always respond with valid JSON.', lovableApiKey);
+      throw new Error('No API key available');
     }
 
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -533,8 +550,6 @@ Only respond with valid JSON, no markdown.`;
 async function generateAISummary(productName, companyName, results, lovableApiKey) {
   console.log('Generating AI summary');
   
-  const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || null;
-  
   const prompt = `Based on the following market research results for "${productName}" by ${companyName || 'the company'}, provide a brief executive summary (2-3 sentences):
   
   Results: ${JSON.stringify(results, null, 2)}
@@ -543,16 +558,19 @@ async function generateAISummary(productName, companyName, results, lovableApiKe
 
   try {
     let content;
-    if (GEMINI_API_KEY) {
-      content = await callGeminiDirect('You are a business analyst. Provide concise executive summaries. ' + prompt, GEMINI_API_KEY);
-    } else if (lovableApiKey) {
+    if (lovableApiKey) {
       content = await callLovableAI(prompt, 'You are a business analyst. Provide concise executive summaries.', lovableApiKey);
     } else {
-      return `Analysis complete for ${productName}. Review the detailed results above.`;
+      const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || null;
+      if (GEMINI_API_KEY) {
+        content = await callGeminiDirect('You are a business analyst. Provide concise executive summaries. ' + prompt, GEMINI_API_KEY);
+      } else {
+        return 'Executive summary generation unavailable.';
+      }
     }
-    return content || `Analysis complete for ${productName}. Review the detailed results above.`;
+    return content;
   } catch (error) {
     console.error('Summary generation error:', error);
-    return `Analysis complete for ${productName}. Review the detailed results above.`;
+    return 'Executive summary generation unavailable due to API error.';
   }
 }
