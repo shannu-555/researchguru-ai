@@ -1,16 +1,16 @@
 project_id = "xxajipwynepeyufdbzqh"
 
 [functions.chat-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.run-agents]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-insights]
 verify_jwt = true
 
 [functions.perplexity-research]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-collaboration-invite]
-verify_jwt = false
+verify_jwt = true

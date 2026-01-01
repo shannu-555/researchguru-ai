@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,39 @@ serve(async (req) => {
   }
 
   try {
+    // Validate JWT authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ 
+        error: 'Authorization header required' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Create client with user's JWT to validate
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Validate user from JWT
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid or expired token' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Authenticated user:', user.id);
+
     const { email, role, inviterEmail } = await req.json();
 
     if (!email || !role) {
@@ -20,6 +54,26 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Verify the inviter owns a workspace or has permission to invite
+    const { data: workspace, error: workspaceError } = await supabase
+      .from('workspace_collaborators')
+      .select('id')
+      .eq('workspace_owner_id', user.id)
+      .limit(1);
+
+    // Allow if user is workspace owner OR if they have existing collaborators (meaning they have a workspace)
+    // Also check research_projects as a fallback
+    const { data: projects } = await supabase
+      .from('research_projects')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1);
+
+    if ((!workspace || workspace.length === 0) && (!projects || projects.length === 0)) {
+      console.log('User has no workspace or projects to invite to');
+      // Still allow the invite but log the situation
     }
 
     // Get Resend API key
@@ -71,7 +125,7 @@ serve(async (req) => {
               </div>
               <div class="content">
                 <p>Hello,</p>
-                <p><strong>${inviterEmail || 'A team member'}</strong> has invited you to collaborate on their Market Research workspace.</p>
+                <p><strong>${inviterEmail || user.email || 'A team member'}</strong> has invited you to collaborate on their Market Research workspace.</p>
                 
                 <p>Your assigned role: <span class="role-badge">${role.toUpperCase()}</span></p>
                 
