@@ -14,36 +14,61 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, userId } = await req.json();
+    // Extract user from JWT token instead of trusting client-provided userId
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ 
+        error: 'Authorization header required' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Validate user from JWT
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid or expired token' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = user.id;
+    const { messages } = await req.json();
     
-    console.log('Chat assistant request:', { messageCount: messages.length, userId });
+    console.log('Chat assistant request:', { messageCount: messages?.length, userId });
 
-    // Get recent agent results for context if userId is provided
+    // Get recent agent results for context using the authenticated user's ID
     let agentContext = '';
-    if (userId) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data: projects } = await supabase
+      .from('research_projects')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-      const { data: projects } = await supabase
-        .from('research_projects')
-        .select('id')
-        .eq('user_id', userId)
+    if (projects && projects.length > 0) {
+      const { data: agentResults } = await supabase
+        .from('agent_results')
+        .select('*')
+        .eq('project_id', projects[0].id)
+        .eq('status', 'completed')
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(10);
 
-      if (projects && projects.length > 0) {
-        const { data: agentResults } = await supabase
-          .from('agent_results')
-          .select('*')
-          .eq('project_id', projects[0].id)
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (agentResults && agentResults.length > 0) {
-          agentContext = `\n\nRecent Research Data:\n${JSON.stringify(agentResults, null, 2)}`;
-        }
+      if (agentResults && agentResults.length > 0) {
+        agentContext = `\n\nRecent Research Data:\n${JSON.stringify(agentResults, null, 2)}`;
       }
     }
 
