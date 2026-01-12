@@ -1,11 +1,31 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const insightTypes = [
+  'market-pulse', 
+  'market-correlation', 
+  'consumer-personas', 
+  'strengths-weaknesses', 
+  'risks-opportunities', 
+  'feature-gaps',
+  'ai_summary'
+] as const;
+
+const generateInsightsSchema = z.object({
+  projectId: z.string()
+    .uuid("Invalid project ID format")
+    .optional()
+    .nullable(),
+  type: z.enum(insightTypes).optional(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,7 +33,25 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, type } = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = generateInsightsSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.errors);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid input',
+        details: validationResult.error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { projectId, type } = validationResult.data;
     
     // Prioritize user's Gemini API key, fall back to Lovable AI Gateway
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
