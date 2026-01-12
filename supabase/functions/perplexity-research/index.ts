@@ -1,10 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const perplexityResearchSchema = z.object({
+  productName: z.string()
+    .min(1, "Product name is required")
+    .max(200, "Product name must be less than 200 characters")
+    .trim(),
+  companyName: z.string()
+    .max(200, "Company name must be less than 200 characters")
+    .trim()
+    .optional()
+    .nullable(),
+  description: z.string()
+    .max(2000, "Description must be less than 2000 characters")
+    .trim()
+    .optional()
+    .nullable(),
+  mode: z.enum(['quick', 'deep']).default('quick'),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -45,7 +65,25 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    const { productName, companyName, description, mode } = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = perplexityResearchSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.errors);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid input',
+        details: validationResult.error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { productName, companyName, description, mode } = validationResult.data;
 
     const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
     

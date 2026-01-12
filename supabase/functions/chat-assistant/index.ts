@@ -2,11 +2,27 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema for chat messages
+const messageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string()
+    .min(1, "Message content is required")
+    .max(10000, "Message content must be less than 10000 characters")
+    .trim(),
+});
+
+const chatAssistantSchema = z.object({
+  messages: z.array(messageSchema)
+    .min(1, "At least one message is required")
+    .max(50, "Too many messages in conversation"),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -44,7 +60,26 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    const { messages } = await req.json();
+    
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validationResult = chatAssistantSchema.safeParse(rawBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.errors);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid input',
+        details: validationResult.error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }))
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { messages } = validationResult.data;
     
     console.log('Chat assistant request:', { messageCount: messages?.length, userId });
 
