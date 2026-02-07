@@ -30,10 +30,6 @@ const runAgentsSchema = z.object({
     .nullable(),
   projectId: z.string()
     .uuid("Invalid project ID format"),
-  userGeminiKey: z.string()
-    .max(100, "API key too long")
-    .optional()
-    .nullable(),
 });
 
 serve(async (req) => {
@@ -94,7 +90,7 @@ serve(async (req) => {
       });
     }
 
-    const { productName, companyName, description, projectId, userGeminiKey } = validationResult.data;
+    const { productName, companyName, description, projectId } = validationResult.data;
     
     // Validate that the user owns the project
     const { data: project, error: projectError } = await userSupabase
@@ -116,6 +112,20 @@ serve(async (req) => {
 
     // Use service role for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch user's Gemini API key server-side (never sent from client)
+    let userGeminiKey: string | null = null;
+    const { data: apiKeyData } = await supabase
+      .from('user_api_keys')
+      .select('key_value')
+      .eq('user_id', user.id)
+      .eq('key_name', 'GEMINI_API_KEY')
+      .single();
+    
+    if (apiKeyData?.key_value) {
+      userGeminiKey = apiKeyData.key_value;
+      console.log('Found user Gemini API key server-side');
+    }
 
     // Determine which API to use - prioritize Lovable AI Gateway (more reliable)
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || null;
