@@ -43,7 +43,7 @@ export default function Research() {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [recentHistory, setRecentHistory] = useState<any[]>([]);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [userGeminiKey, setUserGeminiKey] = useState<string | null>(null);
+  const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [hasCheckedApiKey, setHasCheckedApiKey] = useState(false);
   const [perplexityResults, setPerplexityResults] = useState<any>(null);
   const [isPerplexityLoading, setIsPerplexityLoading] = useState(false);
@@ -54,23 +54,21 @@ export default function Research() {
   useEffect(() => {
     if (user) {
       loadRecentHistory();
-      loadUserGeminiKey();
+      checkGeminiKeyExists();
     }
   }, [user]);
 
-  const loadUserGeminiKey = async () => {
+  const checkGeminiKeyExists = async () => {
     if (!user) return;
     
     const { data } = await supabase
       .from("user_api_keys")
-      .select("key_value")
+      .select("id")
       .eq("user_id", user.id)
       .eq("key_name", "GEMINI_API_KEY")
       .single();
 
-    if (data?.key_value) {
-      setUserGeminiKey(data.key_value);
-    }
+    setHasGeminiKey(!!data);
     setHasCheckedApiKey(true);
   };
 
@@ -202,7 +200,6 @@ export default function Research() {
           companyName,
           description,
           projectId: project.id,
-          userGeminiKey: userGeminiKey,
         }
       });
 
@@ -291,7 +288,7 @@ export default function Research() {
       </div>
 
       {/* API Key Status Banner */}
-      {hasCheckedApiKey && !userGeminiKey && (
+      {hasCheckedApiKey && !hasGeminiKey && (
         <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border border-primary/30">
           <div className="flex items-center gap-3">
             <Key className="h-5 w-5 text-primary" />
@@ -308,7 +305,7 @@ export default function Research() {
         </div>
       )}
 
-      {hasCheckedApiKey && userGeminiKey && (
+      {hasCheckedApiKey && hasGeminiKey && (
         <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
           <CheckCircle className="h-4 w-4 text-green-500" />
           <span className="text-sm text-green-600 dark:text-green-400">Gemini API key configured</span>
@@ -318,7 +315,7 @@ export default function Research() {
       <GeminiApiKeyModal 
         open={showApiKeyModal} 
         onOpenChange={setShowApiKeyModal}
-        onKeyConfigured={() => loadUserGeminiKey()}
+        onKeyConfigured={() => checkGeminiKeyExists()}
       />
 
       {/* Recent History Section */}
