@@ -16,6 +16,7 @@ import {
 const menuItems = [
   { title: "Product Research", url: "/research", icon: LineChart },
   { title: "Comparison", url: "/comparison", icon: BarChart3 },
+  { title: "Market Analytics", url: "/market-analytics", icon: PieChart },
   { title: "AI Insights Center", url: "/ai-insights", icon: Lightbulb },
   { title: "AI Assistant", url: "/ai-assistant", icon: MessageSquare },
   { title: "Cross-Market Correlation", url: "/cross-market", icon: TrendingUp },
