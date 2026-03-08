@@ -3,6 +3,7 @@ import { Lightbulb } from "lucide-react";
 import { StrengthsWeaknessesAnalyzer } from "@/components/StrengthsWeaknessesAnalyzer";
 import { RiskOpportunityDetector } from "@/components/RiskOpportunityDetector";
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
+import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
 import ProjectSelector from "@/components/ProjectSelector";
 
 const AIInsightsCenter = () => {
@@ -33,17 +34,26 @@ const AIInsightsCenter = () => {
         <div className="grid gap-6 lg:gap-8">
           {/* Module 1: Strengths & Weaknesses */}
           <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <StrengthsWeaknessesAnalyzer projectId={selectedProjectId} />
+            <InsightConfidenceIndicator projectId={selectedProjectId} label="Strengths & Weaknesses Confidence" />
+            <div className="mt-2">
+              <StrengthsWeaknessesAnalyzer projectId={selectedProjectId} />
+            </div>
           </div>
 
           {/* Module 2: Risk & Opportunity */}
           <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            <RiskOpportunityDetector projectId={selectedProjectId} />
+            <InsightConfidenceIndicator projectId={selectedProjectId} label="Risk & Opportunity Confidence" />
+            <div className="mt-2">
+              <RiskOpportunityDetector projectId={selectedProjectId} />
+            </div>
           </div>
 
           {/* Module 3: Feature Gap Analysis */}
           <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <FeatureGapAnalysis projectId={selectedProjectId} />
+            <InsightConfidenceIndicator projectId={selectedProjectId} label="Feature Gap Confidence" />
+            <div className="mt-2">
+              <FeatureGapAnalysis projectId={selectedProjectId} />
+            </div>
           </div>
         </div>
       </div>
