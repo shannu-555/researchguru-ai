@@ -209,6 +209,8 @@ export default function Comparison() {
                   </div>
                 </div>
               )}
+
+              <ProductPurchaseLinks productName={product.name} />
             </CardContent>
           </Card>
         ))}
