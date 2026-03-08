@@ -16,6 +16,7 @@ import { ResearchLimitationsBox } from "@/components/ResearchLimitationsBox";
 import { ErrorExplanationPanel } from "@/components/ErrorExplanationPanel";
 import { PerplexityResearchResults } from "@/components/PerplexityResearchResults";
 import { AgentExecutionMonitor } from "@/components/AgentExecutionMonitor";
+import { DataSourcesPanel } from "@/components/DataSourcesPanel";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -458,6 +459,12 @@ export default function Research() {
           perplexityDone={!!perplexityResults}
         />
       </div>
+
+      {/* Data Sources Panel */}
+      <DataSourcesPanel
+        perplexityDone={!!perplexityResults}
+        agentsDone={Object.values(agentStatus).some(s => s === 'Completed')}
+      />
 
       {/* Error Explanation Panel */}
       {researchError && (
