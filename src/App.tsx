@@ -18,6 +18,7 @@ import AIAssistant from "./pages/AIAssistant";
 import EnhancedSettings from "./pages/EnhancedSettings";
 import Pricing from "./pages/Pricing";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import MarketAnalytics from "./pages/MarketAnalytics";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
