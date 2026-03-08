@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { InsightsSummary } from "@/components/InsightsSummary";
 import { AgentMetricsCalculator } from "@/components/AgentMetricsCalculator";
+import { ProductPurchaseLinks } from "@/components/ProductPurchaseLinks";
 import { GeminiApiKeyModal } from "@/components/GeminiApiKeyModal";
 import { ResearchModeSelector } from "@/components/ResearchModeSelector";
 import { ResearchLimitationsBox } from "@/components/ResearchLimitationsBox";
