@@ -694,7 +694,7 @@ function OutcomeCard({
 
           {agentType === 'trend' && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="p-3 bg-background/50 rounded-lg border border-border/30">
                   <p className="text-xs text-muted-foreground mb-1">Trend Score</p>
                   <p className="text-2xl font-bold text-primary">{results.trendScore || 'N/A'}</p>
@@ -703,24 +703,23 @@ function OutcomeCard({
                   <p className="text-xs text-muted-foreground mb-1">Growth Rate</p>
                   <p className="text-2xl font-bold text-primary">{results.growthRate}%</p>
                 </div>
+                {results.demandPattern && (
+                  <div className="p-3 bg-background/50 rounded-lg border border-border/30">
+                    <p className="text-xs text-muted-foreground mb-1">Demand Pattern</p>
+                    <p className={`text-lg font-semibold capitalize ${
+                      results.demandPattern === 'rising' ? 'text-green-500' :
+                      results.demandPattern === 'declining' ? 'text-red-500' :
+                      'text-yellow-500'
+                    }`}>
+                      {results.demandPattern}
+                    </p>
+                  </div>
+                )}
               </div>
-              
-              {results.demandPattern && (
-                <div className="p-3 bg-background/50 rounded-lg border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Demand Pattern</p>
-                  <p className={`text-lg font-semibold capitalize ${
-                    results.demandPattern === 'rising' ? 'text-green-500' :
-                    results.demandPattern === 'declining' ? 'text-red-500' :
-                    'text-yellow-500'
-                  }`}>
-                    {results.demandPattern}
-                  </p>
-                </div>
-              )}
 
               {results.keywords && results.keywords.length > 0 && (
                 <div>
-                  <p className="font-medium mb-2">🔥 Top Trending Keywords:</p>
+                  <p className="font-medium mb-2">🔥 Trending Keywords:</p>
                   <div className="flex flex-wrap gap-2">
                     {results.keywords.map((keyword: string, i: number) => (
                       <span key={i} className="px-3 py-1 bg-primary/20 rounded-full text-xs font-medium">
@@ -728,6 +727,52 @@ function OutcomeCard({
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {results.popularHashtags && results.popularHashtags.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2"># Popular Hashtags:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {results.popularHashtags.map((tag: string, i: number) => (
+                      <span key={i} className="px-3 py-1 bg-accent/30 rounded-full text-xs font-medium text-accent-foreground">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results.trendingFeatures && results.trendingFeatures.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">⚡ Trending Product Features:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.trendingFeatures.map((feature: string, i: number) => (
+                      <li key={i}>{feature}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {results.searchIntentTopics && results.searchIntentTopics.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">🔍 Search Intent Topics:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.searchIntentTopics.map((topic: string, i: number) => (
+                      <li key={i}>{topic}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {results.marketDemandSignals && results.marketDemandSignals.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">📊 Market Demand Signals:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    {results.marketDemandSignals.map((signal: string, i: number) => (
+                      <li key={i}>{signal}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
@@ -750,6 +795,13 @@ function OutcomeCard({
                       <li key={i}>{insight}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {results.marketShift && (
+                <div className="p-3 bg-background/50 rounded-lg border border-border/30">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Market Shift Analysis</p>
+                  <p className="text-sm">{results.marketShift}</p>
                 </div>
               )}
 
