@@ -246,8 +246,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
     );
     missingFeatures.slice(0, 3).forEach((f: any) => {
       const name = f.feature ?? f.text ?? f.name ?? "Unknown feature";
+      const basePart = 50;
       const priorityBoost = f.priority === "high" ? 20 : f.priority === "medium" ? 10 : 0;
-      const score = Math.min(100, 50 + priorityBoost + (missingFeatures.length > 2 ? 10 : 0));
+      const volumeBonus = missingFeatures.length > 2 ? 10 : 0;
+      const score = Math.min(100, basePart + priorityBoost + volumeBonus);
       opps.push({
         title: `Close feature gap: "${name}"`,
         numericScore: score,
@@ -257,6 +259,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
           `Priority: ${f.priority ?? "unknown"}`,
         ],
         sources: ["Feature Gap Analysis", "Competitor Analysis"],
+        breakdown: [
+          { label: "Feature Gap Base", value: basePart },
+          { label: "Priority Boost", value: priorityBoost },
+          { label: "Gap Volume Bonus", value: volumeBonus },
+        ],
+        contributingAgents: ["Competitor Agent"],
       });
     });
   }
