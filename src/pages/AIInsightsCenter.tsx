@@ -75,8 +75,12 @@ const AIInsightsCenter = () => {
             <div className="mt-2">
               <FeatureGapAnalysis projectId={selectedProjectId} />
             </div>
+          {/* Module 7: Data Transparency */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.36s" }}>
+            <DataTransparencyPanel projectId={selectedProjectId} />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
