@@ -109,8 +109,16 @@ export const StrengthsWeaknessesAnalyzer = ({ projectId }: StrengthsWeaknessesAn
                           <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                           <div className="flex-1">
                             <span className="text-sm">{item.text}</span>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Confidence: {item.confidence}%
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                Confidence: {item.confidence}%
+                              </span>
+                              <InsightDrillDown
+                                projectId={projectId}
+                                insightText={item.text}
+                                insightType="strength"
+                                confidence={item.confidence}
+                              />
                             </div>
                           </div>
                         </li>
@@ -137,8 +145,16 @@ export const StrengthsWeaknessesAnalyzer = ({ projectId }: StrengthsWeaknessesAn
                           <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
                           <div className="flex-1">
                             <span className="text-sm">{item.text}</span>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Confidence: {item.confidence}%
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                Confidence: {item.confidence}%
+                              </span>
+                              <InsightDrillDown
+                                projectId={projectId}
+                                insightText={item.text}
+                                insightType="weakness"
+                                confidence={item.confidence}
+                              />
                             </div>
                           </div>
                         </li>

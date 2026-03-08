@@ -131,6 +131,15 @@ export const RiskOpportunityDetector = ({ projectId }: RiskOpportunityDetectorPr
                               {item.impact} impact
                             </span>
                           </div>
+                          <div className="flex justify-end">
+                            <InsightDrillDown
+                              projectId={projectId}
+                              insightText={item.text}
+                              insightType="risk"
+                              confidence={item.confidence}
+                              impact={item.impact}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -165,6 +174,15 @@ export const RiskOpportunityDetector = ({ projectId }: RiskOpportunityDetectorPr
                             <span className={`font-medium uppercase ${getImpactColor(item.impact)}`}>
                               {item.impact} potential
                             </span>
+                          </div>
+                          <div className="flex justify-end">
+                            <InsightDrillDown
+                              projectId={projectId}
+                              insightText={item.text}
+                              insightType="opportunity"
+                              confidence={item.confidence}
+                              impact={item.impact}
+                            />
                           </div>
                         </li>
                       ))}
