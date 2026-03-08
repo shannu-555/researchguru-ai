@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { InsightSummaryPanel } from "@/components/InsightSummaryPanel";
 import { ResearchTimeline } from "@/components/ResearchTimeline";
 import { MarketAnalyticsCharts } from "@/components/MarketAnalyticsCharts";
+import { KnowledgeBaseStatus } from "@/components/KnowledgeBaseStatus";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -198,6 +199,9 @@ export default function Dashboard() {
 
       {/* Market Analytics Charts */}
       <MarketAnalyticsCharts />
+
+      {/* Knowledge Base Status */}
+      <KnowledgeBaseStatus />
 
       {/* Agent Visualization Section */}
       <Card className="glass-effect border-border/50">
