@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { ComparisonSelector } from "@/components/ComparisonSelector";
+import { CompetitorRadarChart } from "@/components/CompetitorRadarChart";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
@@ -213,6 +214,9 @@ export default function Comparison() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Competitor Radar Analysis */}
+      <CompetitorRadarChart products={selectedProducts} />
 
       {/* AI-generated insights */}
       <Card className="glass-effect border-border/50">
