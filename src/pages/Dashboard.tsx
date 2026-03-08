@@ -19,7 +19,7 @@ export default function Dashboard() {
     insights: 0,
     agents: 0,
   });
-  const [latestInsights, setLatestInsights] = useState<any[]>([]);
+  
   const [agentStatuses, setAgentStatuses] = useState({
     sentiment: { active: true, status: 'Ready' },
     competitor: { active: true, status: 'Ready' },
