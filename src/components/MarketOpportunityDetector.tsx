@@ -303,7 +303,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
   if (sentiment?.negative > 25 && competitor?.competitors?.length > 0) {
     const topComp = competitor.competitors[0];
     if (topComp?.rating && topComp.rating >= 4) {
-      const score = Math.min(100, Math.round(40 + sentiment.negative * 0.4 + topComp.rating * 5));
+      const basePart = 40;
+      const sentimentPart = Math.round(sentiment.negative * 0.4);
+      const ratingPart = Math.round(topComp.rating * 5);
+      const score = Math.min(100, basePart + sentimentPart + ratingPart);
       opps.push({
         title: `Differentiate against ${topComp.name ?? "top competitor"} by resolving user pain points`,
         numericScore: score,
@@ -314,6 +317,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
           `Closing the satisfaction gap could capture market share`,
         ],
         sources: ["Sentiment Analysis", "Competitor Analysis"],
+        breakdown: [
+          { label: "Base Score", value: basePart },
+          { label: "Sentiment Dissatisfaction", value: sentimentPart },
+          { label: "Competitor Rating Factor", value: ratingPart },
+        ],
+        contributingAgents: ["Sentiment Agent", "Competitor Agent"],
       });
     }
   }
