@@ -56,7 +56,11 @@ const AIInsightsCenter = () => {
           <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
             <MarketOpportunityDetector projectId={selectedProjectId} />
           </div>
-          <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+
+          {/* Module 4: Competitive Threat Alerts */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
+            <CompetitiveThreatAlerts projectId={selectedProjectId} />
+          </div>
             <InsightConfidenceIndicator projectId={selectedProjectId} label="Feature Gap Confidence" />
             <div className="mt-2">
               <FeatureGapAnalysis projectId={selectedProjectId} />
