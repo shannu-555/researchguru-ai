@@ -431,8 +431,8 @@ export default function Research() {
                 {currentProjectId && (
                   <ReportGenerator 
                     data={{
-                      projectName: productName || recentHistory[0]?.product_name || 'Research Project',
-                      companyName: companyName || recentHistory[0]?.company_name,
+                      projectName: productName || viewingProductName || 'Research Project',
+                      companyName: companyName,
                       agentResults: Object.values(agentOutcomes),
                       perplexityData: perplexityResults?.data,
                       researchMode
