@@ -57,7 +57,6 @@ export function AINotesGenerator({ userId, onNoteGenerated }: Props) {
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <ProjectSelector
-              selectedProjectId={projectId}
               onProjectSelect={setProjectId}
             />
           </div>
