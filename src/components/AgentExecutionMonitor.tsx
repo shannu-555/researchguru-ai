@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Clock, Loader2, XCircle, TrendingUp, Target, Activity, Globe } from 'lucide-react';
+import { CheckCircle, Clock, Loader2, XCircle, TrendingUp, Target, Activity, Globe, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AgentStage {
   label: string;
-  progress: number; // 0-100
-  detail: string; // e.g. "250 / 438 reviews analyzed"
+  progress: number;
+  detail: string;
 }
 
 interface AgentEntry {
@@ -21,6 +21,8 @@ interface AgentEntry {
   executionTimeMs: number | null;
   updatedAt: string | null;
   stage: AgentStage;
+  avgHistoricalMs: number | null;
+  startedAt: number | null; // timestamp when agent started running
 }
 
 const STAGES = {
@@ -39,8 +41,6 @@ function deriveStage(status: AgentEntry['status'], agentKey: string, results: an
   }
   if (status === 'failed') return { label: 'Failed', progress: 0, detail: '' };
   if (status === 'ready') return { label: 'Waiting', progress: 0, detail: '' };
-
-  // Running — simulate stage based on agent key
   return getRunningStage(agentKey);
 }
 
@@ -62,7 +62,6 @@ function getRunningStage(agentKey: string): AgentStage {
 function getSummaryDetail(agentKey: string, results: any): string {
   if (!results) return 'Analysis complete';
   const r = results as Record<string, any>;
-
   switch (agentKey) {
     case 'sentiment': {
       const count = Array.isArray(r.reviews) ? r.reviews.length : r.review_count ?? r.total_reviews ?? null;
@@ -87,11 +86,19 @@ function getSummaryDetail(agentKey: string, results: any): string {
 }
 
 const defaultAgents: AgentEntry[] = [
-  { name: 'Sentiment Agent', key: 'sentiment', icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready },
-  { name: 'Competitor Agent', key: 'competitor', icon: Target, color: 'text-cyan-400', bg: 'bg-cyan-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready },
-  { name: 'Trend Agent', key: 'trend', icon: Activity, color: 'text-green-400', bg: 'bg-green-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready },
-  { name: 'Perplexity Research', key: 'perplexity', icon: Globe, color: 'text-amber-400', bg: 'bg-amber-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready },
+  { name: 'Sentiment Agent', key: 'sentiment', icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
+  { name: 'Competitor Agent', key: 'competitor', icon: Target, color: 'text-cyan-400', bg: 'bg-cyan-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
+  { name: 'Trend Agent', key: 'trend', icon: Activity, color: 'text-green-400', bg: 'bg-green-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
+  { name: 'Perplexity Research', key: 'perplexity', icon: Globe, color: 'text-amber-400', bg: 'bg-amber-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
 ];
+
+// Default fallback ETAs per agent type (ms)
+const DEFAULT_ETA: Record<string, number> = {
+  sentiment: 12000,
+  competitor: 14000,
+  trend: 10000,
+  perplexity: 8000,
+};
 
 interface AgentExecutionMonitorProps {
   projectId?: string | null;
@@ -122,6 +129,16 @@ function formatMs(ms: number | null): string {
   if (ms === null) return '—';
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatEta(ms: number): string {
+  if (ms <= 0) return '< 1s';
+  if (ms < 1000) return '< 1s';
+  const s = Math.ceil(ms / 1000);
+  if (s < 60) return `~${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem > 0 ? `~${m}m ${rem}s` : `~${m}m`;
 }
 
 const statusDot = (status: string) => {
@@ -161,10 +178,51 @@ export const AgentExecutionMonitor = ({
 }: AgentExecutionMonitorProps) => {
   const { user } = useAuth();
   const [agents, setAgents] = useState<AgentEntry[]>(defaultAgents);
+  const [historicalAvgs, setHistoricalAvgs] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(Date.now());
+  const startTimesRef = useRef<Record<string, number>>({});
 
+  // Tick every second to update ETAs
+  useEffect(() => {
+    const hasRunning = agents.some((a) => a.status === 'running');
+    if (!hasRunning) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [agents]);
+
+  // Load historical averages on mount
+  useEffect(() => {
+    if (!user) return;
+    const loadHistory = async () => {
+      const { data } = await supabase
+        .from('agent_results')
+        .select('agent_type, execution_time_ms')
+        .eq('status', 'completed')
+        .not('execution_time_ms', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (data && data.length > 0) {
+        const grouped: Record<string, number[]> = {};
+        data.forEach((r) => {
+          if (r.execution_time_ms) {
+            if (!grouped[r.agent_type]) grouped[r.agent_type] = [];
+            grouped[r.agent_type].push(r.execution_time_ms);
+          }
+        });
+        const avgs: Record<string, number> = {};
+        Object.entries(grouped).forEach(([type, times]) => {
+          avgs[type] = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+        });
+        setHistoricalAvgs(avgs);
+      }
+    };
+    loadHistory();
+  }, [user]);
+
+  // Load current project agent results
   useEffect(() => {
     if (!projectId || !user) return;
-
     const load = async () => {
       const { data } = await supabase
         .from('agent_results')
@@ -183,6 +241,7 @@ export const AgentExecutionMonitor = ({
                 executionTimeMs: match.execution_time_ms,
                 updatedAt: match.updated_at,
                 stage: deriveStage(st, agent.key, match.results),
+                avgHistoricalMs: historicalAvgs[agent.key] ?? DEFAULT_ETA[agent.key] ?? null,
               };
             }
             return agent;
@@ -190,35 +249,55 @@ export const AgentExecutionMonitor = ({
         );
       }
     };
-
     load();
-  }, [projectId, user]);
+  }, [projectId, user, historicalAvgs]);
 
+  // Merge local status + track start times
   useEffect(() => {
     if (!localStatus) return;
 
     setAgents((prev) =>
       prev.map((agent) => {
+        let newStatus: AgentEntry['status'];
         if (agent.key === 'perplexity') {
-          const pStatus: AgentEntry['status'] = isPerplexityLoading
-            ? 'running'
-            : perplexityDone
-              ? 'completed'
-              : 'ready';
-          return { ...agent, status: pStatus, stage: deriveStage(pStatus, 'perplexity', null) };
+          newStatus = isPerplexityLoading ? 'running' : perplexityDone ? 'completed' : 'ready';
+        } else {
+          const override = localStatus[agent.key];
+          newStatus = override ? mapLocalStatus(override) : agent.status;
         }
-        const override = localStatus[agent.key];
-        if (override) {
-          const st = mapLocalStatus(override);
-          return { ...agent, status: st, stage: deriveStage(st, agent.key, null) };
+
+        // Track when agent starts running
+        if (newStatus === 'running' && agent.status !== 'running') {
+          startTimesRef.current[agent.key] = Date.now();
         }
-        return agent;
+        if (newStatus !== 'running') {
+          delete startTimesRef.current[agent.key];
+        }
+
+        return {
+          ...agent,
+          status: newStatus,
+          stage: deriveStage(newStatus, agent.key, null),
+          startedAt: startTimesRef.current[agent.key] ?? agent.startedAt,
+          avgHistoricalMs: historicalAvgs[agent.key] ?? DEFAULT_ETA[agent.key] ?? null,
+        };
       })
     );
-  }, [localStatus, isPerplexityLoading, perplexityDone]);
+  }, [localStatus, isPerplexityLoading, perplexityDone, historicalAvgs]);
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = agents.length > 0 ? Math.round(agents.reduce((s, a) => s + a.stage.progress, 0) / agents.length) : 0;
+
+  const getEtaText = (agent: AgentEntry): string | null => {
+    if (agent.status !== 'running') return null;
+    const startTime = startTimesRef.current[agent.key] ?? agent.startedAt;
+    const avgMs = agent.avgHistoricalMs ?? DEFAULT_ETA[agent.key] ?? null;
+    if (!avgMs) return null;
+    if (!startTime) return `ETA: ${formatEta(avgMs)}`;
+    const elapsed = now - startTime;
+    const remaining = Math.max(0, avgMs - elapsed);
+    return `ETA: ${formatEta(remaining)}`;
+  };
 
   return (
     <Card className="glass-effect border-border/50">
@@ -233,19 +312,18 @@ export const AgentExecutionMonitor = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Overall progress */}
         <div className="space-y-1">
           <Progress value={overallProgress} className="h-1.5" />
         </div>
 
         {agents.map((agent) => {
           const Icon = agent.icon;
+          const eta = getEtaText(agent);
           return (
             <div
               key={agent.key}
               className="p-3 rounded-lg border border-border/50 bg-secondary/20 space-y-2"
             >
-              {/* Header row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`h-9 w-9 rounded-full ${agent.bg} flex items-center justify-center flex-shrink-0`}>
@@ -259,6 +337,12 @@ export const AgentExecutionMonitor = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  {eta && (
+                    <span className="text-[10px] text-primary flex items-center gap-1">
+                      <Timer className="h-3 w-3" />
+                      {eta}
+                    </span>
+                  )}
                   <div className={`h-2 w-2 rounded-full ${statusDot(agent.status)}`} />
                   <StatusIcon status={agent.status} />
                   {agent.executionTimeMs !== null && agent.status === 'completed' && (
@@ -267,10 +351,8 @@ export const AgentExecutionMonitor = ({
                 </div>
               </div>
 
-              {/* Progress bar */}
               <Progress value={agent.stage.progress} className={`h-1 ${progressColor(agent.status)}`} />
 
-              {/* Detail text */}
               {agent.stage.detail && (
                 <p className="text-[10px] text-muted-foreground pl-12">{agent.stage.detail}</p>
               )}
