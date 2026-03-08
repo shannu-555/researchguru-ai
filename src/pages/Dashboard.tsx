@@ -30,7 +30,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       loadStats();
-      loadLatestInsights();
+      
       checkAgentStatuses();
     }
   }, [user]);
