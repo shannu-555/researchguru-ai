@@ -470,7 +470,7 @@ export default function Research() {
             <InsightsSummary projectId={currentProjectId} />
           )}
 
-          <ProductPurchaseLinks productName={productName || recentHistory[0]?.product_name || ''} />
+          <ProductPurchaseLinks productName={productName || viewingProductName || ''} />
 
           <AgentMetricsCalculator agentOutcomes={agentOutcomes} />
         </>
