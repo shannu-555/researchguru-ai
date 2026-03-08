@@ -274,7 +274,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
     const growth = trend.growthRate ?? 0;
     if (growth > 0 && trend.emergingTopics?.length) {
       trend.emergingTopics.slice(0, 2).forEach((topic: string) => {
-        const score = Math.min(100, Math.round(35 + growth * 0.8 + (trend.trendScore ?? 0) * 0.3));
+        const basePart = 35;
+        const growthPart = Math.round(growth * 0.8);
+        const trendScorePart = Math.round((trend.trendScore ?? 0) * 0.3);
+        const score = Math.min(100, basePart + growthPart + trendScorePart);
         opps.push({
           title: `Capitalize on rising trend: "${topic}"`,
           numericScore: score,
@@ -285,6 +288,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
             `"${topic}" is an emerging topic with increasing search interest`,
           ],
           sources: ["Trend Analysis"],
+          breakdown: [
+            { label: "Base Score", value: basePart },
+            { label: "Trend Growth", value: growthPart },
+            { label: "Trend Score Factor", value: trendScorePart },
+          ],
+          contributingAgents: ["Trend Agent"],
         });
       });
     }
