@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Radar, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, Sparkles } from "lucide-react";
+import { Radar, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, Sparkles, Bot, PieChart } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
