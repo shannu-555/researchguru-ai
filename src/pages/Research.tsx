@@ -216,7 +216,7 @@ export default function Research() {
       setProductName("");
       setCompanyName("");
       setDescription("");
-      loadRecentHistory();
+      // History component will auto-refresh
     } catch (error: any) {
       console.error('Research error:', error);
       setResearchError(error.message);
