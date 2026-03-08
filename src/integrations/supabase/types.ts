@@ -297,6 +297,44 @@ export type Database = {
           },
         ]
       }
+      recommendation_tracking: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string | null
+          recommendation_key: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          recommendation_key: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string | null
+          recommendation_key?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_tracking_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "research_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       research_embeddings: {
         Row: {
           agent_result_id: string | null

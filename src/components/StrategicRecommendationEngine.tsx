@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Compass, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, ArrowRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Compass, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, ArrowRight, Check, X, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,11 @@ interface Recommendation {
   evidence: string[];
   category: "feature" | "market" | "pricing" | "positioning" | "growth";
   priority: "high" | "medium" | "low";
+  key: string; // stable identifier for tracking
 }
+
+type TrackingStatus = "pending" | "accepted" | "dismissed";
+type FilterView = "all" | "pending" | "accepted" | "dismissed";
 
 const CATEGORY_LABELS: Record<string, string> = {
   feature: "Feature Improvement",
@@ -35,10 +39,18 @@ const PRIORITY_CONFIG: Record<string, { badge: "destructive" | "secondary" | "ou
   low: { badge: "outline" },
 };
 
+const STATUS_STYLES: Record<TrackingStatus, { bg: string; border: string; label: string }> = {
+  pending: { bg: "bg-muted/30", border: "border-border/50", label: "Pending" },
+  accepted: { bg: "bg-green-50 dark:bg-green-950/20", border: "border-green-200 dark:border-green-900/50", label: "Accepted" },
+  dismissed: { bg: "bg-muted/10 opacity-60", border: "border-border/30", label: "Dismissed" },
+};
+
 export const StrategicRecommendationEngine = ({ projectId }: StrategicRecommendationEngineProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, TrackingStatus>>({});
+  const [filterView, setFilterView] = useState<FilterView>("all");
 
   const generate = async () => {
     setIsLoading(true);
@@ -57,6 +69,9 @@ export const StrategicRecommendationEngine = ({ projectId }: StrategicRecommenda
       const recs = buildRecommendations((agentsRes.data ?? []) as any[], (insightsRes.data ?? []) as any[]);
       setRecommendations(recs);
 
+      // Load saved statuses
+      await loadStatuses(recs.map((r) => r.key));
+
       if (recs.length === 0) {
         toast.info("No recommendations yet. Run more research to generate strategic insights.");
       }
@@ -68,7 +83,78 @@ export const StrategicRecommendationEngine = ({ projectId }: StrategicRecommenda
     }
   };
 
+  const loadStatuses = async (keys: string[]) => {
+    if (!projectId || keys.length === 0) return;
+    try {
+      const { data } = await supabase
+        .from("recommendation_tracking" as any)
+        .select("recommendation_key, status")
+        .eq("project_id", projectId)
+        .in("recommendation_key", keys);
+
+      if (data) {
+        const map: Record<string, TrackingStatus> = {};
+        (data as any[]).forEach((row) => {
+          map[row.recommendation_key] = row.status as TrackingStatus;
+        });
+        setStatuses(map);
+      }
+    } catch {
+      // silently ignore — statuses are optional
+    }
+  };
+
+  const updateStatus = useCallback(async (key: string, newStatus: TrackingStatus) => {
+    if (!projectId) return;
+
+    // Optimistic update
+    setStatuses((prev) => ({ ...prev, [key]: newStatus }));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please sign in to track recommendations.");
+        return;
+      }
+
+      const { error } = await supabase.from("recommendation_tracking" as any).upsert(
+        {
+          user_id: user.id,
+          project_id: projectId,
+          recommendation_key: key,
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "user_id,project_id,recommendation_key" }
+      );
+
+      if (error) throw error;
+      toast.success(`Recommendation ${newStatus}`);
+    } catch (err) {
+      console.error("Status update error:", err);
+      toast.error("Failed to update recommendation status.");
+      // Revert optimistic update
+      setStatuses((prev) => {
+        const copy = { ...prev };
+        delete copy[key];
+        return copy;
+      });
+    }
+  }, [projectId]);
+
   useEffect(() => { generate(); }, [projectId]);
+
+  const filteredRecs = recommendations.filter((rec) => {
+    const s = statuses[rec.key] ?? "pending";
+    return filterView === "all" || s === filterView;
+  });
+
+  const counts = {
+    all: recommendations.length,
+    pending: recommendations.filter((r) => (statuses[r.key] ?? "pending") === "pending").length,
+    accepted: recommendations.filter((r) => statuses[r.key] === "accepted").length,
+    dismissed: recommendations.filter((r) => statuses[r.key] === "dismissed").length,
+  };
 
   return (
     <Card className="border-border/50 shadow-lg">
@@ -99,59 +185,123 @@ export const StrategicRecommendationEngine = ({ projectId }: StrategicRecommenda
 
         <CollapsibleContent>
           <CardContent className="space-y-4">
+            {/* Filter tabs */}
+            {recommendations.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                {(["all", "pending", "accepted", "dismissed"] as FilterView[]).map((view) => (
+                  <Button
+                    key={view}
+                    variant={filterView === view ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs capitalize"
+                    onClick={() => setFilterView(view)}
+                  >
+                    {view} ({counts[view]})
+                  </Button>
+                ))}
+              </div>
+            )}
+
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="ml-2 text-muted-foreground">Generating strategic recommendations…</span>
               </div>
-            ) : recommendations.length === 0 ? (
+            ) : filteredRecs.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No recommendations available. Run sentiment, competitor, and trend analyses first.
+                {recommendations.length === 0
+                  ? "No recommendations available. Run sentiment, competitor, and trend analyses first."
+                  : `No ${filterView} recommendations.`}
               </p>
             ) : (
               <ul className="space-y-4">
-                {recommendations.map((rec, idx) => (
-                  <li key={idx} className="p-4 rounded-lg border border-border/50 bg-muted/30 space-y-3">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2 flex-1">
-                        <ArrowRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <span className="text-sm font-semibold leading-snug">{rec.title}</span>
+                {filteredRecs.map((rec) => {
+                  const currentStatus = statuses[rec.key] ?? "pending";
+                  const style = STATUS_STYLES[currentStatus];
+                  return (
+                    <li key={rec.key} className={`p-4 rounded-lg border ${style.border} ${style.bg} space-y-3 transition-all`}>
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2 flex-1">
+                          <ArrowRight className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span className="text-sm font-semibold leading-snug">{rec.title}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                          {currentStatus !== "pending" && (
+                            <Badge variant={currentStatus === "accepted" ? "default" : "outline"} className="text-xs capitalize">
+                              {style.label}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">{CATEGORY_LABELS[rec.category]}</Badge>
+                          <Badge variant={PRIORITY_CONFIG[rec.priority].badge} className="text-xs capitalize">{rec.priority}</Badge>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge variant="outline" className="text-xs">{CATEGORY_LABELS[rec.category]}</Badge>
-                        <Badge variant={PRIORITY_CONFIG[rec.priority].badge} className="text-xs capitalize">{rec.priority}</Badge>
+
+                      {/* Action */}
+                      <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+                        <span className="text-xs font-medium text-primary">Strategic Action</span>
+                        <p className="text-sm text-foreground mt-1">{rec.action}</p>
                       </div>
-                    </div>
 
-                    {/* Action */}
-                    <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
-                      <span className="text-xs font-medium text-primary">Strategic Action</span>
-                      <p className="text-sm text-foreground mt-1">{rec.action}</p>
-                    </div>
+                      {/* Evidence */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">Supporting Evidence</span>
+                        <ul className="space-y-1">
+                          {rec.evidence.map((ev, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                              <span className="text-primary mt-px">•</span>{ev}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
 
-                    {/* Evidence */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-muted-foreground">Supporting Evidence</span>
-                      <ul className="space-y-1">
-                        {rec.evidence.map((ev, i) => (
-                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                            <span className="text-primary mt-px">•</span>{ev}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <InsightDrillDown
-                        projectId={projectId}
-                        insightText={rec.title}
-                        insightType="opportunity"
-                        impact={rec.priority}
-                      />
-                    </div>
-                  </li>
-                ))}
+                      {/* Actions row */}
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-2">
+                          {currentStatus !== "accepted" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30"
+                              onClick={() => updateStatus(rec.key, "accepted")}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Accept
+                            </Button>
+                          )}
+                          {currentStatus !== "dismissed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive"
+                              onClick={() => updateStatus(rec.key, "dismissed")}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Dismiss
+                            </Button>
+                          )}
+                          {currentStatus !== "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-muted-foreground"
+                              onClick={() => updateStatus(rec.key, "pending")}
+                            >
+                              Reset
+                            </Button>
+                          )}
+                        </div>
+                        <InsightDrillDown
+                          projectId={projectId}
+                          insightText={rec.title}
+                          insightType="opportunity"
+                          impact={rec.priority}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
@@ -167,7 +317,6 @@ export const StrategicRecommendationEngine = ({ projectId }: StrategicRecommenda
     </Card>
   );
 };
-
 /* ------------------------------------------------------------------ */
 /*  Pure recommendation logic — reads existing data only               */
 /* ------------------------------------------------------------------ */
@@ -190,6 +339,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
   if (missingHighPriority.length > 0) {
     const names = missingHighPriority.slice(0, 3).map((f: any) => f.feature ?? f.name ?? "unknown");
     recs.push({
+      key: "feature-high-gaps",
       title: `Prioritize development of ${names.length} critical missing feature${names.length > 1 ? "s" : ""}`,
       action: `Allocate engineering resources to build ${names.join(", ")}. These features are available in competitor products and marked as high priority gaps.`,
       evidence: [
@@ -206,6 +356,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
   );
   if (missingMedium.length > 0) {
     recs.push({
+      key: "feature-medium-gaps",
       title: `Plan roadmap for ${missingMedium.length} medium-priority feature gap${missingMedium.length > 1 ? "s" : ""}`,
       action: `Schedule these features in the next 1-2 quarters: ${missingMedium.slice(0, 3).map((f: any) => f.feature ?? "unknown").join(", ")}.`,
       evidence: [`${missingMedium.length} medium-priority gaps identified in feature comparison`],
@@ -219,6 +370,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     if (sentiment.negative > 30) {
       const themes = (sentiment.negativeThemes ?? []).slice(0, 3).map((t: any) => typeof t === "string" ? t : t.theme);
       recs.push({
+        key: "sentiment-negative-churn",
         title: "Address high negative sentiment to reduce churn risk",
         action: `Focus on resolving top user complaints${themes.length ? `: ${themes.join(", ")}` : ""}. Consider a dedicated "quality sprint" to address the most impactful issues.`,
         evidence: [
@@ -233,6 +385,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     if (sentiment.positive > 60) {
       const themes = (sentiment.positiveThemes ?? []).slice(0, 2).map((t: any) => typeof t === "string" ? t : t.theme);
       recs.push({
+        key: "sentiment-positive-amplify",
         title: "Amplify strong positive sentiment in marketing",
         action: `Leverage high user satisfaction (${sentiment.positive}% positive) in marketing materials. Highlight${themes.length ? ` "${themes.join('", "')}"` : " key strengths"} in campaigns and case studies.`,
         evidence: [
@@ -250,6 +403,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     if (trend.growthRate > 15 && trend.emergingTopics?.length) {
       const topics = trend.emergingTopics.slice(0, 2);
       recs.push({
+        key: "trend-market-expansion",
         title: `Enter growing market segment around "${topics[0]}"`,
         action: `The market is growing at ${trend.growthRate}%. Position the product to capture emerging demand in ${topics.join(" and ")} by developing targeted features or content.`,
         evidence: [
@@ -264,6 +418,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
 
     if (trend.keywords?.length > 5) {
       recs.push({
+        key: "trend-seo-keywords",
         title: "Optimize SEO and content strategy around trending keywords",
         action: `Incorporate top trending keywords into product pages and content: ${trend.keywords.slice(0, 5).join(", ")}.`,
         evidence: [
@@ -287,6 +442,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
       const min = Math.min(...prices);
       const max = Math.max(...prices);
       recs.push({
+        key: "pricing-strategy-review",
         title: "Review pricing strategy relative to competitors",
         action: `Competitor pricing ranges from $${min.toFixed(0)} to $${max.toFixed(0)} (avg $${avg.toFixed(0)}). Evaluate whether your pricing reflects your value proposition and feature set. Consider tiered pricing to capture different segments.`,
         evidence: [
@@ -305,6 +461,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     const topRated = competitor.competitors.filter((c: any) => (c.rating ?? 0) >= 4);
     if (topRated.length > 0 && sentiment.negative > 20) {
       recs.push({
+        key: "competitive-differentiation",
         title: "Strengthen differentiation against highly-rated competitors",
         action: `${topRated.length} competitor(s) have ratings ≥ 4/5 while your product faces ${sentiment.negative}% negative sentiment. Identify and double down on unique value propositions that competitors cannot easily replicate.`,
         evidence: [
