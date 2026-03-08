@@ -9,6 +9,7 @@ import { InsightSummaryPanel } from "@/components/InsightSummaryPanel";
 import { ResearchTimeline } from "@/components/ResearchTimeline";
 import { MarketAnalyticsCharts } from "@/components/MarketAnalyticsCharts";
 import { KnowledgeBaseStatus } from "@/components/KnowledgeBaseStatus";
+import { AIUsageMonitor } from "@/components/AIUsageMonitor";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -361,6 +362,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Usage Monitor */}
+      <AIUsageMonitor />
     </div>
   );
 }
