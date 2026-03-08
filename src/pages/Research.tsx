@@ -64,47 +64,27 @@ export default function Research() {
     setHasCheckedApiKey(true);
   };
 
-  const loadRecentHistory = async () => {
-    if (!user) return;
-
-    try {
-      const { data } = await supabase
-        .from('research_projects')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (data) {
-        setRecentHistory(data);
-      }
-    } catch (error) {
-      console.error('Error loading recent history:', error);
-    }
+  const handleViewHistoryResults = (project: any, outcomes: Record<string, any>) => {
+    setCurrentProjectId(project.id);
+    setViewingProductName(project.product_name);
+    setAgentOutcomes(outcomes);
+    setAgentStatus({
+      sentiment: outcomes.sentiment ? "Completed" : "Ready",
+      competitor: outcomes.competitor ? "Completed" : "Ready",
+      trend: outcomes.trend ? "Completed" : "Ready",
+    });
+    // Scroll to results
+    setTimeout(() => {
+      document.getElementById("agent-outcomes")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
-  const handleDeleteProject = async (projectId: string) => {
-    try {
-      await supabase.from('agent_results').delete().eq('project_id', projectId);
-      await supabase.from('insights').delete().eq('project_id', projectId);
-      const { error } = await supabase.from('research_projects').delete().eq('id', projectId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Project deleted",
-        description: "The research project has been removed successfully.",
-      });
-
-      loadRecentHistory();
-    } catch (error: any) {
-      console.error('Error deleting project:', error);
-      toast({
-        title: "Delete failed",
-        description: error.message || "Failed to delete project",
-        variant: "destructive",
-      });
-    }
+  const handleRerun = (project: any) => {
+    setProductName(project.product_name);
+    setCompanyName(project.company_name || "");
+    setDescription(project.description || "");
+    // Scroll to input
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const runPerplexityResearch = async () => {
