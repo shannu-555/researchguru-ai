@@ -67,6 +67,7 @@ const App = () => (
                 <Route path="/cross-market" element={<CrossMarket />} />
                 <Route path="/consumer-persona" element={<ConsumerPersona />} />
                 <Route path="/scenario-simulator" element={<ScenarioSimulator />} />
+                <Route path="/market-analytics" element={<MarketAnalytics />} />
                 <Route path="/my-notes" element={<MyNotes />} />
                 <Route path="/settings" element={<EnhancedSettings />} />
                 <Route path="/pricing" element={<Pricing />} />
