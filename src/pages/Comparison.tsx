@@ -274,7 +274,7 @@ export default function Comparison() {
             AI-Generated Comparative Insights
           </CardTitle>
           <CardDescription>
-            Intelligent analysis powered by Groq AI
+            Intelligent analysis with confidence scoring and evidence
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,10 +286,112 @@ export default function Comparison() {
                 <div className="h-2 w-2 bg-primary rounded-full animate-bounce delay-200" />
               </div>
             </div>
-          ) : (
+          ) : structuredInsights.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {structuredInsights.map((insight, idx) => {
+                const confColor = insight.confidence >= 80 ? "text-green-600 dark:text-green-400" : insight.confidence >= 65 ? "text-yellow-600 dark:text-yellow-400" : "text-orange-600 dark:text-orange-400";
+                const barColor = insight.confidence >= 80 ? "[&>div]:bg-green-500" : insight.confidence >= 65 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-orange-500";
+                return (
+                  <Card key={idx} className="border-border/50 bg-muted/20">
+                    <CardContent className="p-4 space-y-3">
+                      {/* Title */}
+                      <div className="flex items-start gap-2">
+                        <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <p className="text-sm font-semibold leading-snug">{insight.title}</p>
+                      </div>
+
+                      {/* Confidence */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Confidence</span>
+                          <span className={`font-semibold ${confColor}`}>{insight.confidence}%</span>
+                        </div>
+                        <Progress value={insight.confidence} className={`h-1.5 ${barColor}`} />
+                      </div>
+
+                      {/* Evidence preview */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <FileText className="h-3 w-3" /> Supporting Evidence
+                        </span>
+                        <ul className="space-y-0.5">
+                          {insight.evidence.slice(0, 2).map((e, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                              <span className="text-primary mt-px">•</span>
+                              <span className="line-clamp-2">{e}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Sources */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Database className="h-3 w-3 text-muted-foreground" />
+                        {insight.sources.map((s, i) => (
+                          <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                        ))}
+                      </div>
+
+                      {/* View Evidence Dialog */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full text-xs gap-1.5 h-7">
+                            <Eye className="h-3 w-3" /> View Evidence
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-base">
+                              <Brain className="h-4 w-4 text-primary" />
+                              {insight.title}
+                            </DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-muted-foreground">Confidence:</span>
+                              <Progress value={insight.confidence} className={`h-2 flex-1 ${barColor}`} />
+                              <span className={`text-sm font-semibold ${confColor}`}>{insight.confidence}%</span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">Supporting Evidence</h4>
+                              <ul className="space-y-1.5">
+                                {insight.evidence.map((e, i) => (
+                                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                                    <span className="text-primary mt-0.5">•</span>
+                                    <span>{e}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">Data Sources</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {insight.sources.map((s, i) => (
+                                  <Badge key={i} variant="secondary">{s}</Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-semibold">Full Analysis</h4>
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{insight.rawText}</p>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : aiInsights ? (
             <div className="prose prose-sm max-w-none">
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{aiInsights}</p>
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">Select products to generate comparative insights.</p>
           )}
         </CardContent>
       </Card>
