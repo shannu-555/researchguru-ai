@@ -15,6 +15,7 @@ import { ResearchModeSelector } from "@/components/ResearchModeSelector";
 import { ResearchLimitationsBox } from "@/components/ResearchLimitationsBox";
 import { ErrorExplanationPanel } from "@/components/ErrorExplanationPanel";
 import { PerplexityResearchResults } from "@/components/PerplexityResearchResults";
+import { AgentExecutionMonitor } from "@/components/AgentExecutionMonitor";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
