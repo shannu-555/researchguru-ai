@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { InsightSummaryPanel } from "@/components/InsightSummaryPanel";
+import { ResearchTimeline } from "@/components/ResearchTimeline";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -248,6 +249,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Research Timeline */}
+      <ResearchTimeline />
 
       {/* Latest Insights Section */}
       {latestInsights.length > 0 && (
