@@ -53,23 +53,6 @@ export default function Dashboard() {
     }
   };
 
-  const loadLatestInsights = async () => {
-    if (!user) return;
-
-    try {
-      const { data: insights } = await supabase
-        .from('insights')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(4);
-
-      if (insights) {
-        setLatestInsights(insights);
-      }
-    } catch (error) {
-      console.error('Error loading latest insights:', error);
-    }
-  };
 
   const checkAgentStatuses = async () => {
     if (!user) return;
