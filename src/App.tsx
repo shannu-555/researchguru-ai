@@ -18,6 +18,7 @@ import AIAssistant from "./pages/AIAssistant";
 import EnhancedSettings from "./pages/EnhancedSettings";
 import Pricing from "./pages/Pricing";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import MarketAnalytics from "./pages/MarketAnalytics";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/cross-market" element={<CrossMarket />} />
                 <Route path="/consumer-persona" element={<ConsumerPersona />} />
                 <Route path="/scenario-simulator" element={<ScenarioSimulator />} />
+                <Route path="/market-analytics" element={<MarketAnalytics />} />
                 <Route path="/my-notes" element={<MyNotes />} />
                 <Route path="/settings" element={<EnhancedSettings />} />
                 <Route path="/pricing" element={<Pricing />} />
