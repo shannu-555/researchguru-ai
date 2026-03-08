@@ -46,7 +46,6 @@ export default function Research() {
 
   useEffect(() => {
     if (user) {
-      loadRecentHistory();
       checkGeminiKeyExists();
     }
   }, [user]);
