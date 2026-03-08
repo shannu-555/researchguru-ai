@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Loader2, CheckCircle, XCircle, Clock, History, Trash2, Key, Sparkles } from "lucide-react";
+import { Search, Loader2, CheckCircle, XCircle, Clock, Key, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,18 +18,8 @@ import { ErrorExplanationPanel } from "@/components/ErrorExplanationPanel";
 import { PerplexityResearchResults } from "@/components/PerplexityResearchResults";
 import { AgentExecutionMonitor } from "@/components/AgentExecutionMonitor";
 import { DataSourcesPanel } from "@/components/DataSourcesPanel";
+import ResearchHistory from "@/components/ResearchHistory";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 export default function Research() {
   const [productName, setProductName] = useState("");
