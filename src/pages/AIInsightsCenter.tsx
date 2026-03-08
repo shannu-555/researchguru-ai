@@ -4,6 +4,7 @@ import { StrengthsWeaknessesAnalyzer } from "@/components/StrengthsWeaknessesAna
 import { RiskOpportunityDetector } from "@/components/RiskOpportunityDetector";
 import { MarketOpportunityDetector } from "@/components/MarketOpportunityDetector";
 import { CompetitiveThreatAlerts } from "@/components/CompetitiveThreatAlerts";
+import { StrategicRecommendationEngine } from "@/components/StrategicRecommendationEngine";
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
 import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
 import { ResearchReportExporter } from "@/components/ResearchReportExporter";
@@ -62,7 +63,12 @@ const AIInsightsCenter = () => {
             <CompetitiveThreatAlerts projectId={selectedProjectId} />
           </div>
 
-          {/* Module 5: Feature Gap Analysis */}
+          {/* Module 5: Strategic Recommendation Engine */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.32s" }}>
+            <StrategicRecommendationEngine projectId={selectedProjectId} />
+          </div>
+
+          {/* Module 6: Feature Gap Analysis */}
           <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <InsightConfidenceIndicator projectId={selectedProjectId} label="Feature Gap Confidence" />
             <div className="mt-2">
