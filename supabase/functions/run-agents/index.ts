@@ -565,24 +565,32 @@ CRITICAL REQUIREMENTS:
 2. Include source evidence for trend claims
 3. Calculate confidence score based on data availability
 
-Provide a comprehensive trend analysis with:
-1. Top Trending Keywords (5-10 product-specific keywords)
-2. Emerging Topics (3-5 relevant topics with evidence)
-3. Recent Market Mentions (3-5 specific, verifiable points)
-4. Market Shift Analysis (grounded observation)
-5. Industry Impact (2-4 evidence-based impacts)
-6. Consumer Interest Patterns
-7. Growth Metrics with confidence level
-8. Future Predictions (3 grounded predictions)
-9. 12-Month Trend Data
-10. Source domains used for analysis
-11. Evidence snippets supporting key claims
+Provide a comprehensive trend analysis covering ALL of the following:
+1. Trending Keywords (5-10 most searched product-related keywords)
+2. Popular Hashtags (5-8 hashtags commonly used in product discussions/reviews)
+3. Trending Product Features (4-6 features frequently mentioned in search queries and reviews)
+4. Search Intent Topics (4-6 common questions/queries users ask about this product)
+5. Market Demand Signals (3-5 emerging market needs or interest trends)
+6. Emerging Topics (3-5 relevant topics with evidence)
+7. Recent Market Mentions (3-5 specific, verifiable points)
+8. Market Shift Analysis (grounded observation)
+9. Industry Impact (2-4 evidence-based impacts)
+10. Consumer Interest Patterns
+11. Growth Metrics with confidence level
+12. Future Predictions (3 grounded predictions)
+13. 12-Month Trend Data
+14. Source domains used for analysis
+15. Evidence snippets supporting key claims
 
 Return ONLY a valid JSON object with this structure:
 {
   "trendScore": <number 0-100>,
   "growthRate": <number percentage>,
   "keywords": [<array of 5-10 keyword strings>],
+  "popularHashtags": [<array of 5-8 hashtag strings starting with #>],
+  "trendingFeatures": [<array of 4-6 feature strings>],
+  "searchIntentTopics": [<array of 4-6 question/query strings>],
+  "marketDemandSignals": [<array of 3-5 signal strings>],
   "emergingTopics": [<array of 3-5 topic strings>],
   "recentMentions": [<array of 3-5 mention strings>],
   "marketShift": "<analysis string>",
