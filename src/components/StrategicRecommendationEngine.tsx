@@ -339,6 +339,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
   if (missingHighPriority.length > 0) {
     const names = missingHighPriority.slice(0, 3).map((f: any) => f.feature ?? f.name ?? "unknown");
     recs.push({
+      key: "feature-high-gaps",
       title: `Prioritize development of ${names.length} critical missing feature${names.length > 1 ? "s" : ""}`,
       action: `Allocate engineering resources to build ${names.join(", ")}. These features are available in competitor products and marked as high priority gaps.`,
       evidence: [
@@ -355,6 +356,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
   );
   if (missingMedium.length > 0) {
     recs.push({
+      key: "feature-medium-gaps",
       title: `Plan roadmap for ${missingMedium.length} medium-priority feature gap${missingMedium.length > 1 ? "s" : ""}`,
       action: `Schedule these features in the next 1-2 quarters: ${missingMedium.slice(0, 3).map((f: any) => f.feature ?? "unknown").join(", ")}.`,
       evidence: [`${missingMedium.length} medium-priority gaps identified in feature comparison`],
@@ -368,6 +370,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     if (sentiment.negative > 30) {
       const themes = (sentiment.negativeThemes ?? []).slice(0, 3).map((t: any) => typeof t === "string" ? t : t.theme);
       recs.push({
+        key: "sentiment-negative-churn",
         title: "Address high negative sentiment to reduce churn risk",
         action: `Focus on resolving top user complaints${themes.length ? `: ${themes.join(", ")}` : ""}. Consider a dedicated "quality sprint" to address the most impactful issues.`,
         evidence: [
@@ -382,6 +385,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     if (sentiment.positive > 60) {
       const themes = (sentiment.positiveThemes ?? []).slice(0, 2).map((t: any) => typeof t === "string" ? t : t.theme);
       recs.push({
+        key: "sentiment-positive-amplify",
         title: "Amplify strong positive sentiment in marketing",
         action: `Leverage high user satisfaction (${sentiment.positive}% positive) in marketing materials. Highlight${themes.length ? ` "${themes.join('", "')}"` : " key strengths"} in campaigns and case studies.`,
         evidence: [
@@ -399,6 +403,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     if (trend.growthRate > 15 && trend.emergingTopics?.length) {
       const topics = trend.emergingTopics.slice(0, 2);
       recs.push({
+        key: "trend-market-expansion",
         title: `Enter growing market segment around "${topics[0]}"`,
         action: `The market is growing at ${trend.growthRate}%. Position the product to capture emerging demand in ${topics.join(" and ")} by developing targeted features or content.`,
         evidence: [
@@ -413,6 +418,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
 
     if (trend.keywords?.length > 5) {
       recs.push({
+        key: "trend-seo-keywords",
         title: "Optimize SEO and content strategy around trending keywords",
         action: `Incorporate top trending keywords into product pages and content: ${trend.keywords.slice(0, 5).join(", ")}.`,
         evidence: [
@@ -436,6 +442,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
       const min = Math.min(...prices);
       const max = Math.max(...prices);
       recs.push({
+        key: "pricing-strategy-review",
         title: "Review pricing strategy relative to competitors",
         action: `Competitor pricing ranges from $${min.toFixed(0)} to $${max.toFixed(0)} (avg $${avg.toFixed(0)}). Evaluate whether your pricing reflects your value proposition and feature set. Consider tiered pricing to capture different segments.`,
         evidence: [
@@ -454,6 +461,7 @@ function buildRecommendations(agents: any[], insights: any[]): Recommendation[] 
     const topRated = competitor.competitors.filter((c: any) => (c.rating ?? 0) >= 4);
     if (topRated.length > 0 && sentiment.negative > 20) {
       recs.push({
+        key: "competitive-differentiation",
         title: "Strengthen differentiation against highly-rated competitors",
         action: `${topRated.length} competitor(s) have ratings ≥ 4/5 while your product faces ${sentiment.negative}% negative sentiment. Identify and double down on unique value propositions that competitors cannot easily replicate.`,
         evidence: [
