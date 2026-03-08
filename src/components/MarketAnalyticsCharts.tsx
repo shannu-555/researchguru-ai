@@ -13,9 +13,9 @@ const PIE_COLORS = ['hsl(142,70%,45%)', 'hsl(48,90%,55%)', 'hsl(0,70%,55%)'];
 const BAR_COLOR = 'hsl(220,70%,55%)';
 const LINE_COLOR = 'hsl(262,70%,55%)';
 
-interface SentimentData { name: string; value: number }
-interface CompetitorData { name: string; score: number }
-interface TrendData { period: string; value: number }
+interface SentimentData { name: string; value: number; [key: string]: string | number }
+interface CompetitorData { name: string; score: number; [key: string]: string | number }
+interface TrendData { period: string; value: number; [key: string]: string | number }
 
 const EmptyState = ({ label }: { label: string }) => (
   <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
