@@ -34,7 +34,7 @@ export default function Research() {
   });
   const [agentOutcomes, setAgentOutcomes] = useState<Record<string, any>>({});
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [recentHistory, setRecentHistory] = useState<any[]>([]);
+  const [viewingProductName, setViewingProductName] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [hasCheckedApiKey, setHasCheckedApiKey] = useState(false);
