@@ -94,6 +94,54 @@ export type Database = {
           },
         ]
       }
+      insight_bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          insight_content: string
+          insight_type: string
+          metadata: Json | null
+          note_id: string | null
+          source_project_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insight_content: string
+          insight_type: string
+          metadata?: Json | null
+          note_id?: string | null
+          source_project_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insight_content?: string
+          insight_type?: string
+          metadata?: Json | null
+          note_id?: string | null
+          source_project_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insight_bookmarks_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "research_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insight_bookmarks_source_project_id_fkey"
+            columns: ["source_project_id"]
+            isOneToOne: false
+            referencedRelation: "research_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights: {
         Row: {
           created_at: string
@@ -122,6 +170,98 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "research_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_tag_links: {
+        Row: {
+          id: string
+          note_id: string
+          tag_id: string
+        }
+        Insert: {
+          id?: string
+          note_id: string
+          tag_id: string
+        }
+        Update: {
+          id?: string
+          note_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_tag_links_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "research_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "note_tag_links_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "note_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          tag_name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          tag_name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          tag_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      note_versions: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          note_id: string
+          title: string
+          version_number: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          note_id: string
+          title: string
+          version_number?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          note_id?: string
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_versions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "research_notes"
             referencedColumns: ["id"]
           },
         ]
@@ -334,6 +474,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      research_documents: {
+        Row: {
+          ai_competitor_mentions: Json | null
+          ai_key_insights: Json | null
+          ai_market_trends: Json | null
+          ai_summary: string | null
+          analysis_status: string | null
+          category: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_competitor_mentions?: Json | null
+          ai_key_insights?: Json | null
+          ai_market_trends?: Json | null
+          ai_summary?: string | null
+          analysis_status?: string | null
+          category?: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number
+          file_type: string
+          id?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_competitor_mentions?: Json | null
+          ai_key_insights?: Json | null
+          ai_market_trends?: Json | null
+          ai_summary?: string | null
+          analysis_status?: string | null
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       research_embeddings: {
         Row: {
