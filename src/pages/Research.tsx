@@ -464,6 +464,7 @@ export default function Research() {
       <DataSourcesPanel
         perplexityDone={!!perplexityResults}
         agentsDone={Object.values(agentStatus).some(s => s === 'Completed')}
+        projectId={currentProjectId}
       />
 
       {/* Error Explanation Panel */}
