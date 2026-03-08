@@ -118,7 +118,7 @@ export const CompetitiveThreatAlerts = ({ projectId }: CompetitiveThreatAlertsPr
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-muted-foreground w-20 shrink-0">Threat Level</span>
                         <Progress value={t.numericScore} className="h-2 flex-1" />
-                        <span className="font-medium w-8 text-right">{t.numericScore}%</span>
+                        <span className="font-medium w-8 text-right">{Math.round(t.numericScore)}%</span>
                       </div>
 
                       <p className="text-sm text-muted-foreground">{t.explanation}</p>
