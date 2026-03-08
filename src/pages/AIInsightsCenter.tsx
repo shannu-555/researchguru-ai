@@ -4,6 +4,7 @@ import { StrengthsWeaknessesAnalyzer } from "@/components/StrengthsWeaknessesAna
 import { RiskOpportunityDetector } from "@/components/RiskOpportunityDetector";
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
 import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
+import { ResearchReportExporter } from "@/components/ResearchReportExporter";
 import ProjectSelector from "@/components/ProjectSelector";
 
 const AIInsightsCenter = () => {
