@@ -40,6 +40,7 @@ export default function Comparison() {
   const { toast } = useToast();
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [aiInsights, setAiInsights] = useState<string>("");
+  const [loading, setLoading] = useState(false);
   const [structuredInsights, setStructuredInsights] = useState<StructuredInsight[]>([]);
 
   const handleProductsSelected = async (products: Product[]) => {
