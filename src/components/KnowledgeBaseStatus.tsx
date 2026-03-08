@@ -18,6 +18,10 @@ export const KnowledgeBaseStatus = () => {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState<KBMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadMetrics = useCallback(async () => {
+    if (!user) return;
 
   useEffect(() => {
     if (!user) return;
