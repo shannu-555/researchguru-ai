@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, XCircle, MinusCircle, Info, ChevronDown, ChevronUp, RefreshCw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { InsightDrillDown } from "@/components/InsightDrillDown";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
