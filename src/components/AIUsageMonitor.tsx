@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Activity, Zap, DollarSign, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface UsageStats {
   totalRuns: number;
@@ -11,38 +12,50 @@ interface UsageStats {
   estimatedCost: number;
 }
 
-const COST_PER_1K_TOKENS = 0.00035; // approximate blended rate
+type TimeRange = '7d' | '30d' | 'all';
+
+const COST_PER_1K_TOKENS = 0.00035;
+
+function dateFilter(range: TimeRange): string | null {
+  if (range === 'all') return null;
+  const d = new Date();
+  d.setDate(d.getDate() - (range === '7d' ? 7 : 30));
+  return d.toISOString();
+}
 
 export const AIUsageMonitor = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<TimeRange>('all');
 
   useEffect(() => {
     if (!user) return;
 
     const load = async () => {
       setLoading(true);
+      const since = dateFilter(range);
 
-      const [runsRes, agentsRes] = await Promise.all([
-        supabase.from('research_runs').select('id', { count: 'exact', head: true }),
-        supabase.from('agent_results').select('tokens_used, execution_time_ms'),
-      ]);
+      let runsQuery = supabase.from('research_runs').select('id', { count: 'exact', head: true });
+      let agentsQuery = supabase.from('agent_results').select('tokens_used, execution_time_ms, created_at');
+
+      if (since) {
+        runsQuery = runsQuery.gte('started_at', since);
+        agentsQuery = agentsQuery.gte('created_at', since);
+      }
+
+      const [runsRes, agentsRes] = await Promise.all([runsQuery, agentsQuery]);
 
       const totalRuns = runsRes.count ?? 0;
       const agents = agentsRes.data ?? [];
 
       let tokensConsumed = 0;
-      agents.forEach((a) => {
-        tokensConsumed += a.tokens_used ?? 0;
-      });
-
-      // If no token data recorded, estimate ~800 tokens per agent call
+      agents.forEach((a) => { tokensConsumed += a.tokens_used ?? 0; });
       if (tokensConsumed === 0 && agents.length > 0) {
         tokensConsumed = agents.length * 800;
       }
 
-      const apiCalls = agents.length + totalRuns; // agents + run orchestration calls
+      const apiCalls = agents.length + totalRuns;
       const estimatedCost = (tokensConsumed / 1000) * COST_PER_1K_TOKENS;
 
       setStats({ totalRuns, tokensConsumed, apiCalls, estimatedCost });
@@ -50,7 +63,7 @@ export const AIUsageMonitor = () => {
     };
 
     load();
-  }, [user]);
+  }, [user, range]);
 
   if (loading || !stats) return null;
 
@@ -64,11 +77,25 @@ export const AIUsageMonitor = () => {
   return (
     <Card className="glass-effect border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Activity className="h-5 w-5 text-primary" />
-          AI Usage Monitor
-        </CardTitle>
-        <CardDescription>Estimated usage statistics across all research operations</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Activity className="h-5 w-5 text-primary" />
+              AI Usage Monitor
+            </CardTitle>
+            <CardDescription>Estimated usage statistics across research operations</CardDescription>
+          </div>
+          <Select value={range} onValueChange={(v) => setRange(v as TimeRange)}>
+            <SelectTrigger className="w-[130px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
