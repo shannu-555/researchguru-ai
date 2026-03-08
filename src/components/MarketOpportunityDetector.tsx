@@ -142,7 +142,37 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-muted-foreground w-24 shrink-0">Opportunity Score</span>
                         <Progress value={opp.numericScore} className="h-2 flex-1" />
-                        <span className="font-medium w-8 text-right">{opp.numericScore}%</span>
+                        <span className="font-medium w-8 text-right">{Math.round(opp.numericScore)}%</span>
+                      </div>
+
+                      {/* Score Breakdown */}
+                      <div className="space-y-1.5 rounded-md bg-background/50 border border-border/30 p-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                          <PieChart className="h-3 w-3" />
+                          Score Breakdown
+                        </div>
+                        {opp.breakdown.map((b, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{b.label}</span>
+                            <span className="font-medium">{b.value}%</span>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between text-xs border-t border-border/30 pt-1 mt-1">
+                          <span className="font-semibold">Total Score</span>
+                          <span className="font-semibold">{Math.round(opp.numericScore)}%</span>
+                        </div>
+                      </div>
+
+                      {/* Contributing Agents */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Bot className="h-3 w-3" /> Contributing Agents
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {opp.contributingAgents.map((agent, i) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0.5">{agent}</Badge>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Evidence */}
