@@ -213,7 +213,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
     sentiment.negativeThemes.slice(0, 3).forEach((t: any) => {
       const theme = typeof t === "string" ? t : t.theme ?? "";
       if (!theme) return;
-      const score = Math.min(100, Math.round(30 + negPct * 0.5 + (sentiment.negativeThemes.length > 2 ? 10 : 0)));
+      const basePart = 30;
+      const sentimentPart = Math.round(negPct * 0.5);
+      const volumePart = sentiment.negativeThemes.length > 2 ? 10 : 0;
+      const score = Math.min(100, basePart + sentimentPart + volumePart);
       opps.push({
         title: `Address unmet need: "${theme}"`,
         numericScore: score,
@@ -223,6 +226,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
           `Theme "${theme}" repeatedly surfaced in user feedback`,
         ],
         sources: ["Sentiment Analysis"],
+        breakdown: [
+          { label: "Base Score", value: basePart },
+          { label: "Sentiment Dissatisfaction", value: sentimentPart },
+          { label: "Theme Volume Bonus", value: volumePart },
+        ],
+        contributingAgents: ["Sentiment Agent"],
       });
     });
   }
