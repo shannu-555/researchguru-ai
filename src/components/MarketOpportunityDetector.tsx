@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Radar, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, Sparkles } from "lucide-react";
+import { Radar, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, Sparkles, Bot, PieChart } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +14,19 @@ interface MarketOpportunityDetectorProps {
   projectId: string | undefined;
 }
 
+interface ScoreBreakdown {
+  label: string;
+  value: number;
+}
+
 interface Opportunity {
   title: string;
   score: "high" | "medium" | "low";
   numericScore: number;
   evidence: string[];
   sources: string[];
+  breakdown: ScoreBreakdown[];
+  contributingAgents: string[];
 }
 
 const SCORE_CONFIG: Record<string, { label: string; color: string; badgeVariant: "default" | "secondary" | "outline" }> = {
@@ -135,7 +142,37 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-muted-foreground w-24 shrink-0">Opportunity Score</span>
                         <Progress value={opp.numericScore} className="h-2 flex-1" />
-                        <span className="font-medium w-8 text-right">{opp.numericScore}%</span>
+                        <span className="font-medium w-8 text-right">{Math.round(opp.numericScore)}%</span>
+                      </div>
+
+                      {/* Score Breakdown */}
+                      <div className="space-y-1.5 rounded-md bg-background/50 border border-border/30 p-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                          <PieChart className="h-3 w-3" />
+                          Score Breakdown
+                        </div>
+                        {opp.breakdown.map((b, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{b.label}</span>
+                            <span className="font-medium">{b.value}%</span>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between text-xs border-t border-border/30 pt-1 mt-1">
+                          <span className="font-semibold">Total Score</span>
+                          <span className="font-semibold">{Math.round(opp.numericScore)}%</span>
+                        </div>
+                      </div>
+
+                      {/* Contributing Agents */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Bot className="h-3 w-3" /> Contributing Agents
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {opp.contributingAgents.map((agent, i) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0.5">{agent}</Badge>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Evidence */}
@@ -206,7 +243,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
     sentiment.negativeThemes.slice(0, 3).forEach((t: any) => {
       const theme = typeof t === "string" ? t : t.theme ?? "";
       if (!theme) return;
-      const score = Math.min(100, Math.round(30 + negPct * 0.5 + (sentiment.negativeThemes.length > 2 ? 10 : 0)));
+      const basePart = 30;
+      const sentimentPart = Math.round(negPct * 0.5);
+      const volumePart = sentiment.negativeThemes.length > 2 ? 10 : 0;
+      const score = Math.min(100, basePart + sentimentPart + volumePart);
       opps.push({
         title: `Address unmet need: "${theme}"`,
         numericScore: score,
@@ -216,6 +256,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
           `Theme "${theme}" repeatedly surfaced in user feedback`,
         ],
         sources: ["Sentiment Analysis"],
+        breakdown: [
+          { label: "Base Score", value: basePart },
+          { label: "Sentiment Dissatisfaction", value: sentimentPart },
+          { label: "Theme Volume Bonus", value: volumePart },
+        ],
+        contributingAgents: ["Sentiment Agent"],
       });
     });
   }
@@ -230,8 +276,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
     );
     missingFeatures.slice(0, 3).forEach((f: any) => {
       const name = f.feature ?? f.text ?? f.name ?? "Unknown feature";
+      const basePart = 50;
       const priorityBoost = f.priority === "high" ? 20 : f.priority === "medium" ? 10 : 0;
-      const score = Math.min(100, 50 + priorityBoost + (missingFeatures.length > 2 ? 10 : 0));
+      const volumeBonus = missingFeatures.length > 2 ? 10 : 0;
+      const score = Math.min(100, basePart + priorityBoost + volumeBonus);
       opps.push({
         title: `Close feature gap: "${name}"`,
         numericScore: score,
@@ -241,6 +289,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
           `Priority: ${f.priority ?? "unknown"}`,
         ],
         sources: ["Feature Gap Analysis", "Competitor Analysis"],
+        breakdown: [
+          { label: "Feature Gap Base", value: basePart },
+          { label: "Priority Boost", value: priorityBoost },
+          { label: "Gap Volume Bonus", value: volumeBonus },
+        ],
+        contributingAgents: ["Competitor Agent"],
       });
     });
   }
@@ -250,7 +304,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
     const growth = trend.growthRate ?? 0;
     if (growth > 0 && trend.emergingTopics?.length) {
       trend.emergingTopics.slice(0, 2).forEach((topic: string) => {
-        const score = Math.min(100, Math.round(35 + growth * 0.8 + (trend.trendScore ?? 0) * 0.3));
+        const basePart = 35;
+        const growthPart = Math.round(growth * 0.8);
+        const trendScorePart = Math.round((trend.trendScore ?? 0) * 0.3);
+        const score = Math.min(100, basePart + growthPart + trendScorePart);
         opps.push({
           title: `Capitalize on rising trend: "${topic}"`,
           numericScore: score,
@@ -261,6 +318,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
             `"${topic}" is an emerging topic with increasing search interest`,
           ],
           sources: ["Trend Analysis"],
+          breakdown: [
+            { label: "Base Score", value: basePart },
+            { label: "Trend Growth", value: growthPart },
+            { label: "Trend Score Factor", value: trendScorePart },
+          ],
+          contributingAgents: ["Trend Agent"],
         });
       });
     }
@@ -270,7 +333,10 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
   if (sentiment?.negative > 25 && competitor?.competitors?.length > 0) {
     const topComp = competitor.competitors[0];
     if (topComp?.rating && topComp.rating >= 4) {
-      const score = Math.min(100, Math.round(40 + sentiment.negative * 0.4 + topComp.rating * 5));
+      const basePart = 40;
+      const sentimentPart = Math.round(sentiment.negative * 0.4);
+      const ratingPart = Math.round(topComp.rating * 5);
+      const score = Math.min(100, basePart + sentimentPart + ratingPart);
       opps.push({
         title: `Differentiate against ${topComp.name ?? "top competitor"} by resolving user pain points`,
         numericScore: score,
@@ -281,6 +347,12 @@ function analyzeOpportunities(agents: any[], insights: any[]): Opportunity[] {
           `Closing the satisfaction gap could capture market share`,
         ],
         sources: ["Sentiment Analysis", "Competitor Analysis"],
+        breakdown: [
+          { label: "Base Score", value: basePart },
+          { label: "Sentiment Dissatisfaction", value: sentimentPart },
+          { label: "Competitor Rating Factor", value: ratingPart },
+        ],
+        contributingAgents: ["Sentiment Agent", "Competitor Agent"],
       });
     }
   }
