@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, XCircle, MinusCircle, Info, ChevronDown, ChevronUp, RefreshCw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { InsightDrillDown } from "@/components/InsightDrillDown";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -139,9 +140,16 @@ export const FeatureGapAnalysis = ({ projectId }: FeatureGapAnalysisProps) => {
                             className={`border-b border-border/50 ${isMissing ? "bg-red-50 dark:bg-red-950/20" : ""}`}
                           >
                             <td className="py-3 px-4">
-                              <span className={isMissing ? "text-red-700 dark:text-red-300 font-medium" : ""}>
-                                {item.feature}
-                              </span>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className={isMissing ? "text-red-700 dark:text-red-300 font-medium" : ""}>
+                                  {item.feature}
+                                </span>
+                                <InsightDrillDown
+                                  projectId={projectId}
+                                  insightText={item.feature}
+                                  insightType="feature_gap"
+                                />
+                              </div>
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex justify-center">

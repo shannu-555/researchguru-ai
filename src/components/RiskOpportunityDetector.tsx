@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, TrendingUp, Info, ChevronDown, ChevronUp, RefreshCw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { InsightDrillDown } from "@/components/InsightDrillDown";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -130,6 +131,15 @@ export const RiskOpportunityDetector = ({ projectId }: RiskOpportunityDetectorPr
                               {item.impact} impact
                             </span>
                           </div>
+                          <div className="flex justify-end">
+                            <InsightDrillDown
+                              projectId={projectId}
+                              insightText={item.text}
+                              insightType="risk"
+                              confidence={item.confidence}
+                              impact={item.impact}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -164,6 +174,15 @@ export const RiskOpportunityDetector = ({ projectId }: RiskOpportunityDetectorPr
                             <span className={`font-medium uppercase ${getImpactColor(item.impact)}`}>
                               {item.impact} potential
                             </span>
+                          </div>
+                          <div className="flex justify-end">
+                            <InsightDrillDown
+                              projectId={projectId}
+                              insightText={item.text}
+                              insightType="opportunity"
+                              confidence={item.confidence}
+                              impact={item.impact}
+                            />
                           </div>
                         </li>
                       ))}
