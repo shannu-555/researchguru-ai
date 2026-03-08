@@ -19,7 +19,7 @@ export default function Dashboard() {
     insights: 0,
     agents: 0,
   });
-  const [latestInsights, setLatestInsights] = useState<any[]>([]);
+  
   const [agentStatuses, setAgentStatuses] = useState({
     sentiment: { active: true, status: 'Ready' },
     competitor: { active: true, status: 'Ready' },
@@ -30,7 +30,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       loadStats();
-      loadLatestInsights();
+      
       checkAgentStatuses();
     }
   }, [user]);
@@ -53,23 +53,6 @@ export default function Dashboard() {
     }
   };
 
-  const loadLatestInsights = async () => {
-    if (!user) return;
-
-    try {
-      const { data: insights } = await supabase
-        .from('insights')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(4);
-
-      if (insights) {
-        setLatestInsights(insights);
-      }
-    } catch (error) {
-      console.error('Error loading latest insights:', error);
-    }
-  };
 
   const checkAgentStatuses = async () => {
     if (!user) return;
@@ -262,44 +245,6 @@ export default function Dashboard() {
       {/* Research Timeline */}
       <ResearchTimeline />
 
-      {/* Latest Insights Section */}
-      {latestInsights.length > 0 && (
-        <Card className="glass-effect border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Latest AI Insights
-            </CardTitle>
-            <CardDescription>Recent AI-powered market intelligence</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {latestInsights.slice(0, 4).map((insight, index) => (
-                <Card key={insight.id || index} className="border-border/50 bg-secondary/20">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium capitalize">{insight.insight_type?.replace(/-/g, ' ') || 'Insight'}</p>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {typeof insight.data === 'object' 
-                            ? (insight.data as any)?.summary || 'Analysis completed'
-                            : 'Analysis completed'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {new Date(insight.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card 
