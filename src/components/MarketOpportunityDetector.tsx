@@ -14,12 +14,19 @@ interface MarketOpportunityDetectorProps {
   projectId: string | undefined;
 }
 
+interface ScoreBreakdown {
+  label: string;
+  value: number;
+}
+
 interface Opportunity {
   title: string;
   score: "high" | "medium" | "low";
   numericScore: number;
   evidence: string[];
   sources: string[];
+  breakdown: ScoreBreakdown[];
+  contributingAgents: string[];
 }
 
 const SCORE_CONFIG: Record<string, { label: string; color: string; badgeVariant: "default" | "secondary" | "outline" }> = {
