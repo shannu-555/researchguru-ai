@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { InsightSummaryPanel } from "@/components/InsightSummaryPanel";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -189,6 +190,9 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Key Insights Summary Panel */}
+      <InsightSummaryPanel />
 
       {/* Agent Visualization Section */}
       <Card className="glass-effect border-border/50">
