@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { Radar, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, Sparkles, Bot, PieChart, History } from "lucide-react";
+import { Radar, RefreshCw, Info, ChevronDown, ChevronUp, Loader2, Sparkles, Bot, PieChart, History, GitCompareArrows, Bell } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InsightDrillDown } from "@/components/InsightDrillDown";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +42,13 @@ interface HistoryPoint {
   count: number;
 }
 
+interface ComparisonProject {
+  id: string;
+  name: string;
+  avgScore: number;
+  opportunities: Opportunity[];
+}
+
 const SCORE_CONFIG: Record<string, { label: string; color: string; badgeVariant: "default" | "secondary" | "outline" }> = {
   high: { label: "High", color: "text-green-600 dark:text-green-400", badgeVariant: "default" },
   medium: { label: "Medium", color: "text-yellow-600 dark:text-yellow-400", badgeVariant: "secondary" },
@@ -54,8 +62,15 @@ const BREAKDOWN_COLORS = [
   "hsl(280 65% 60%)",
 ];
 
+const COMPARISON_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(142 71% 45%)",
+  "hsl(280 65% 60%)",
+  "hsl(48 96% 53%)",
+];
+
 /* ------------------------------------------------------------------ */
-/*  Stacked breakdown bar — pure CSS, no chart library needed          */
+/*  Stacked breakdown bar                                              */
 /* ------------------------------------------------------------------ */
 const BreakdownBar = ({ breakdown, total }: { breakdown: ScoreBreakdown[]; total: number }) => {
   if (total === 0) return null;
@@ -65,7 +80,6 @@ const BreakdownBar = ({ breakdown, total }: { breakdown: ScoreBreakdown[]; total
         <PieChart className="h-3 w-3" />
         Score Breakdown
       </div>
-      {/* Stacked bar */}
       <div className="flex h-5 w-full rounded-full overflow-hidden bg-muted/40">
         {breakdown.map((b, i) => {
           const pct = (b.value / Math.max(total, 1)) * 100;
@@ -85,7 +99,6 @@ const BreakdownBar = ({ breakdown, total }: { breakdown: ScoreBreakdown[]; total
           );
         })}
       </div>
-      {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-1">
         {breakdown.map((b, i) => (
           <div key={i} className="flex items-center gap-1.5 text-xs">
@@ -112,6 +125,11 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [comparisonProjects, setComparisonProjects] = useState<ComparisonProject[]>([]);
+  const [allProjects, setAllProjects] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([]);
+  const [isLoadingComparison, setIsLoadingComparison] = useState(false);
 
   const detect = async () => {
     setIsLoading(true);
@@ -132,9 +150,10 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
 
       const detected = analyzeOpportunities(agents, insights);
       setOpportunities(detected);
-
-      // Build historical timeline from past agent results
       buildHistory(agents, insights);
+
+      // Notify on high-score opportunities
+      await notifyHighScoreOpportunities(detected);
 
       if (detected.length === 0) {
         toast.info("No market opportunities detected yet. Run more research to generate data.");
@@ -147,8 +166,47 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
     }
   };
 
+  const notifyHighScoreOpportunities = async (opps: Opportunity[]) => {
+    const highScoreOpps = opps.filter((o) => o.numericScore >= 70);
+    if (highScoreOpps.length === 0) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if we already notified for these opportunities recently (last 24h)
+      const { data: recentNotifs } = await supabase
+        .from("user_notifications")
+        .select("title")
+        .eq("user_id", user.id)
+        .eq("notification_type", "high_opportunity")
+        .gte("created_at", new Date(Date.now() - 86400000).toISOString());
+
+      const recentTitles = new Set((recentNotifs ?? []).map((n: any) => n.title));
+
+      const newNotifs = highScoreOpps
+        .filter((o) => !recentTitles.has(`High Opportunity: ${o.title}`))
+        .slice(0, 3)
+        .map((o) => ({
+          user_id: user.id,
+          notification_type: "high_opportunity",
+          title: `High Opportunity: ${o.title}`,
+          message: `Score: ${Math.round(o.numericScore)}% — ${o.evidence[0] ?? "Detected from cross-source analysis"}`,
+          link: projectId ? `/ai-insights?project=${projectId}` : "/ai-insights",
+        }));
+
+      if (newNotifs.length > 0) {
+        await supabase.from("user_notifications").insert(newNotifs);
+        toast.success(`${newNotifs.length} high-score opportunity alert${newNotifs.length > 1 ? "s" : ""} created!`, {
+          icon: <Bell className="h-4 w-4" />,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to create opportunity notifications:", err);
+    }
+  };
+
   const buildHistory = (agents: any[], insights: any[]) => {
-    // Group agent results by date and compute opportunity scores per date
     const dateMap = new Map<string, any[]>();
     agents.forEach((a) => {
       const date = format(new Date(a.created_at), "MMM dd");
@@ -165,12 +223,75 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
       }
     });
 
-    // Sort chronologically (approximate via original order)
     setHistory(points);
   };
 
+  // Load all projects for comparison
+  const loadProjects = async () => {
+    const { data } = await supabase
+      .from("research_projects")
+      .select("id, product_name")
+      .order("created_at", { ascending: false });
+    if (data) {
+      setAllProjects(data.map((p) => ({ id: p.id, name: p.product_name })));
+    }
+  };
+
+  const addComparisonProject = async (id: string) => {
+    if (selectedCompareIds.includes(id) || selectedCompareIds.length >= 4) return;
+    setSelectedCompareIds((prev) => [...prev, id]);
+    setIsLoadingComparison(true);
+
+    try {
+      const [agentsRes, insightsRes] = await Promise.all([
+        supabase.from("agent_results").select("agent_type, results, status, created_at").eq("project_id", id).eq("status", "completed"),
+        supabase.from("insights").select("insight_type, data").eq("project_id", id),
+      ]);
+
+      const agents = (agentsRes.data ?? []) as any[];
+      const insights = (insightsRes.data ?? []) as any[];
+      const opps = analyzeOpportunities(agents, insights);
+      const proj = allProjects.find((p) => p.id === id);
+      const avg = opps.length > 0 ? Math.round(opps.reduce((s, o) => s + o.numericScore, 0) / opps.length) : 0;
+
+      setComparisonProjects((prev) => [
+        ...prev,
+        { id, name: proj?.name ?? "Unknown", avgScore: avg, opportunities: opps },
+      ]);
+    } catch (err) {
+      console.error("Comparison load error:", err);
+    } finally {
+      setIsLoadingComparison(false);
+    }
+  };
+
+  const removeComparisonProject = (id: string) => {
+    setSelectedCompareIds((prev) => prev.filter((p) => p !== id));
+    setComparisonProjects((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Build comparison bar chart data
+  const comparisonChartData = useMemo(() => {
+    // Current project data
+    const currentAvg = opportunities.length > 0
+      ? Math.round(opportunities.reduce((s, o) => s + o.numericScore, 0) / opportunities.length)
+      : 0;
+    const currentName = allProjects.find((p) => p.id === projectId)?.name ?? "Current Project";
+
+    const data = [
+      { name: currentName.slice(0, 20), avgScore: currentAvg, count: opportunities.length },
+      ...comparisonProjects.map((cp) => ({
+        name: cp.name.slice(0, 20),
+        avgScore: cp.avgScore,
+        count: cp.opportunities.length,
+      })),
+    ];
+    return data;
+  }, [opportunities, comparisonProjects, projectId, allProjects]);
+
   useEffect(() => {
     detect();
+    loadProjects();
   }, [projectId]);
 
   return (
@@ -268,6 +389,131 @@ export const MarketOpportunityDetector = ({ projectId }: MarketOpportunityDetect
                     </CollapsibleContent>
                   </Collapsible>
                 )}
+
+                {/* Cross-Project Comparison */}
+                <Collapsible open={showComparison} onOpenChange={setShowComparison}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full gap-2 text-xs">
+                      <GitCompareArrows className="h-3.5 w-3.5" />
+                      {showComparison ? "Hide" : "Show"} Cross-Project Comparison
+                      {showComparison ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-3 p-4 rounded-lg border border-border/30 bg-background/50 space-y-3">
+                      <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                        <GitCompareArrows className="h-4 w-4 text-primary" />
+                        Compare Opportunity Scores Across Projects
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Select up to 3 additional projects to compare opportunity scores side by side.
+                      </p>
+
+                      {/* Project selector */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Select
+                          onValueChange={(val) => addComparisonProject(val)}
+                          disabled={selectedCompareIds.length >= 3}
+                        >
+                          <SelectTrigger className="w-56 h-8 text-xs">
+                            <SelectValue placeholder="Add project to compare…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allProjects
+                              .filter((p) => p.id !== projectId && !selectedCompareIds.includes(p.id))
+                              .map((p) => (
+                                <SelectItem key={p.id} value={p.id} className="text-xs">
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        {isLoadingComparison && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                      </div>
+
+                      {/* Selected comparison badges */}
+                      {comparisonProjects.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {comparisonProjects.map((cp) => (
+                            <Badge
+                              key={cp.id}
+                              variant="secondary"
+                              className="text-xs cursor-pointer gap-1"
+                              onClick={() => removeComparisonProject(cp.id)}
+                            >
+                              {cp.name} — {cp.avgScore}% avg
+                              <span className="text-muted-foreground ml-1">×</span>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Comparison Bar Chart */}
+                      {comparisonProjects.length > 0 && (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart data={comparisonChartData} layout="vertical" margin={{ left: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
+                            <RechartsTooltip
+                              contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid hsl(var(--border))" }}
+                              formatter={(value: number, name: string) => [
+                                name === "avgScore" ? `${value}%` : value,
+                                name === "avgScore" ? "Avg Score" : "Opportunities"
+                              ]}
+                            />
+                            <Bar dataKey="avgScore" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="avgScore" />
+                            <Bar dataKey="count" fill="hsl(142 71% 45%)" radius={[0, 4, 4, 0]} name="count" />
+                            <Legend formatter={(value) => value === "avgScore" ? "Avg Score %" : "# Opportunities"} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+
+                      {/* Detailed comparison table */}
+                      {comparisonProjects.length > 0 && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-border/30">
+                                <th className="text-left py-1.5 font-medium text-muted-foreground">Project</th>
+                                <th className="text-center py-1.5 font-medium text-muted-foreground">Avg Score</th>
+                                <th className="text-center py-1.5 font-medium text-muted-foreground">Opportunities</th>
+                                <th className="text-center py-1.5 font-medium text-muted-foreground">High</th>
+                                <th className="text-center py-1.5 font-medium text-muted-foreground">Medium</th>
+                                <th className="text-center py-1.5 font-medium text-muted-foreground">Low</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {/* Current project row */}
+                              <tr className="border-b border-border/20 bg-primary/5">
+                                <td className="py-1.5 font-medium">
+                                  {allProjects.find((p) => p.id === projectId)?.name ?? "Current"} ★
+                                </td>
+                                <td className="text-center font-semibold">
+                                  {opportunities.length > 0 ? Math.round(opportunities.reduce((s, o) => s + o.numericScore, 0) / opportunities.length) : 0}%
+                                </td>
+                                <td className="text-center">{opportunities.length}</td>
+                                <td className="text-center text-green-600">{opportunities.filter((o) => o.score === "high").length}</td>
+                                <td className="text-center text-yellow-600">{opportunities.filter((o) => o.score === "medium").length}</td>
+                                <td className="text-center text-muted-foreground">{opportunities.filter((o) => o.score === "low").length}</td>
+                              </tr>
+                              {comparisonProjects.map((cp) => (
+                                <tr key={cp.id} className="border-b border-border/20">
+                                  <td className="py-1.5">{cp.name}</td>
+                                  <td className="text-center font-semibold">{cp.avgScore}%</td>
+                                  <td className="text-center">{cp.opportunities.length}</td>
+                                  <td className="text-center text-green-600">{cp.opportunities.filter((o) => o.score === "high").length}</td>
+                                  <td className="text-center text-yellow-600">{cp.opportunities.filter((o) => o.score === "medium").length}</td>
+                                  <td className="text-center text-muted-foreground">{cp.opportunities.filter((o) => o.score === "low").length}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 {/* Opportunity Cards */}
                 <ul className="space-y-4">
