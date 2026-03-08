@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Database, FileText, Clock, Layers, Cpu, BarChart3, SplitSquareHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Database, FileText, Clock, Layers, Cpu, BarChart3, SplitSquareHorizontal, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
