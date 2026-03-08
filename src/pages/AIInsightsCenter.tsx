@@ -27,8 +27,9 @@ const AIInsightsCenter = () => {
         </div>
 
         {/* Project Selector */}
-        <div className="flex justify-center animate-fade-in" style={{ animationDelay: "0.05s" }}>
+        <div className="flex items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <ProjectSelector onProjectSelect={setSelectedProjectId} />
+          <ResearchReportExporter projectId={selectedProjectId} />
         </div>
 
         {/* Insight Modules Grid */}
