@@ -451,57 +451,12 @@ export default function Research() {
           </CardContent>
         </Card>
 
-        <Card className="glass-effect border-border/50">
-          <CardHeader>
-            <CardTitle>Agent Status</CardTitle>
-            <CardDescription>Monitor AI agents progress</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <AgentStatus 
-              name="Sentiment Agent" 
-              status={agentStatus.sentiment}
-              outcome={agentOutcomes['sentiment']}
-            />
-            <AgentStatus 
-              name="Competitor Agent" 
-              status={agentStatus.competitor}
-              outcome={agentOutcomes['competitor']}
-            />
-            <AgentStatus 
-              name="Trends Agent" 
-              status={agentStatus.trend}
-              outcome={agentOutcomes['trend']}
-            />
-
-            {/* Perplexity Status */}
-            <div className="pt-3 border-t border-border/50">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                <span className="font-medium text-sm">Perplexity Research</span>
-                <div className="flex items-center gap-2">
-                  {isPerplexityLoading ? (
-                    <>
-                      <div className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
-                      <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
-                      <span className="text-sm text-muted-foreground">In Progress</span>
-                    </>
-                  ) : perplexityResults ? (
-                    <>
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-muted-foreground">Completed</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-2 w-2 rounded-full bg-gray-500" />
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Ready</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AgentExecutionMonitor
+          projectId={currentProjectId}
+          localStatus={agentStatus}
+          isPerplexityLoading={isPerplexityLoading}
+          perplexityDone={!!perplexityResults}
+        />
       </div>
 
       {/* Error Explanation Panel */}
