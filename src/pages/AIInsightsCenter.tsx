@@ -8,6 +8,7 @@ import { StrategicRecommendationEngine } from "@/components/StrategicRecommendat
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
 import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
 import { ResearchReportExporter } from "@/components/ResearchReportExporter";
+import { DataTransparencyPanel } from "@/components/DataTransparencyPanel";
 import ProjectSelector from "@/components/ProjectSelector";
 
 const AIInsightsCenter = () => {
@@ -74,8 +75,12 @@ const AIInsightsCenter = () => {
             <div className="mt-2">
               <FeatureGapAnalysis projectId={selectedProjectId} />
             </div>
+          {/* Module 7: Data Transparency */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.36s" }}>
+            <DataTransparencyPanel projectId={selectedProjectId} />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
