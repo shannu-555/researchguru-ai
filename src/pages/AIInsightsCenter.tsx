@@ -8,6 +8,7 @@ import { StrategicRecommendationEngine } from "@/components/StrategicRecommendat
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
 import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
 import { ResearchReportExporter } from "@/components/ResearchReportExporter";
+import { DataTransparencyPanel } from "@/components/DataTransparencyPanel";
 import ProjectSelector from "@/components/ProjectSelector";
 
 const AIInsightsCenter = () => {
