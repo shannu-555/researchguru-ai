@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { InsightSummaryPanel } from "@/components/InsightSummaryPanel";
 import { ResearchTimeline } from "@/components/ResearchTimeline";
+import { MarketAnalyticsCharts } from "@/components/MarketAnalyticsCharts";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -194,6 +195,9 @@ export default function Dashboard() {
 
       {/* Key Insights Summary Panel */}
       <InsightSummaryPanel />
+
+      {/* Market Analytics Charts */}
+      <MarketAnalyticsCharts />
 
       {/* Agent Visualization Section */}
       <Card className="glass-effect border-border/50">
