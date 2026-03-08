@@ -3,6 +3,7 @@ import { Lightbulb } from "lucide-react";
 import { StrengthsWeaknessesAnalyzer } from "@/components/StrengthsWeaknessesAnalyzer";
 import { RiskOpportunityDetector } from "@/components/RiskOpportunityDetector";
 import { MarketOpportunityDetector } from "@/components/MarketOpportunityDetector";
+import { CompetitiveThreatAlerts } from "@/components/CompetitiveThreatAlerts";
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
 import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
 import { ResearchReportExporter } from "@/components/ResearchReportExporter";
@@ -55,6 +56,13 @@ const AIInsightsCenter = () => {
           <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
             <MarketOpportunityDetector projectId={selectedProjectId} />
           </div>
+
+          {/* Module 4: Competitive Threat Alerts */}
+          <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
+            <CompetitiveThreatAlerts projectId={selectedProjectId} />
+          </div>
+
+          {/* Module 5: Feature Gap Analysis */}
           <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <InsightConfidenceIndicator projectId={selectedProjectId} label="Feature Gap Confidence" />
             <div className="mt-2">
