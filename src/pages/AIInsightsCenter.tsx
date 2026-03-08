@@ -3,6 +3,7 @@ import { Lightbulb } from "lucide-react";
 import { StrengthsWeaknessesAnalyzer } from "@/components/StrengthsWeaknessesAnalyzer";
 import { RiskOpportunityDetector } from "@/components/RiskOpportunityDetector";
 import { MarketOpportunityDetector } from "@/components/MarketOpportunityDetector";
+import { CompetitiveThreatAlerts } from "@/components/CompetitiveThreatAlerts";
 import { FeatureGapAnalysis } from "@/components/FeatureGapAnalysis";
 import { InsightConfidenceIndicator } from "@/components/InsightConfidenceIndicator";
 import { ResearchReportExporter } from "@/components/ResearchReportExporter";
