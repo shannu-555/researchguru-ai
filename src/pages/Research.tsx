@@ -3,7 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Loader2, CheckCircle, XCircle, Clock, Key, Sparkles } from "lucide-react";
+import { Search, Loader2, CheckCircle, XCircle, Clock, Key, Sparkles, TrendingUp } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart,
+} from 'recharts';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -795,6 +798,60 @@ function OutcomeCard({
                       <li key={i}>{insight}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {results.predictions && results.predictions.length > 0 && (
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="font-medium mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    🔮 Future Predictions
+                  </p>
+                  <div className="space-y-2">
+                    {results.predictions.map((prediction: string, i: number) => (
+                      <div key={i} className="flex items-start gap-3 p-2 bg-background/50 rounded-md border border-border/30">
+                        <span className="text-xs font-bold text-primary bg-primary/10 rounded-full w-6 h-6 flex items-center justify-center shrink-0">{i + 1}</span>
+                        <p className="text-sm text-muted-foreground">{prediction}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {results.monthlyData && results.monthlyData.length > 0 && (
+                <div className="p-4 bg-background/50 rounded-lg border border-border/30">
+                  <p className="font-medium mb-3">📈 12-Month Trend Chart</p>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart data={results.monthlyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          color: 'hsl(var(--foreground))',
+                        }}
+                        formatter={(value: number) => [`${value}`, 'Interest Score']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        fill="url(#trendGradient)"
+                        dot={{ r: 3, fill: 'hsl(var(--primary))' }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               )}
 
