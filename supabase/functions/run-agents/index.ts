@@ -30,6 +30,10 @@ const runAgentsSchema = z.object({
     .nullable(),
   projectId: z.string()
     .uuid("Invalid project ID format"),
+  language: z.string()
+    .max(10)
+    .optional()
+    .nullable(),
 });
 
 serve(async (req) => {
@@ -90,7 +94,11 @@ serve(async (req) => {
       });
     }
 
-    const { productName, companyName, description, projectId } = validationResult.data;
+    const { productName, companyName, description, projectId, language } = validationResult.data;
+    const analysisLang = language || 'en';
+    const langInstruction = analysisLang !== 'en' 
+      ? `\n\nIMPORTANT: Analyze this product in the context of the "${analysisLang}" language market. Include keywords, themes, and insights relevant to ${analysisLang}-speaking consumers. Provide the analysis output in English but reference original-language terms where relevant.` 
+      : '';
     
     // Validate that the user owns the project
     const { data: project, error: projectError } = await userSupabase
@@ -157,9 +165,9 @@ serve(async (req) => {
 
     // Run all agents in parallel - pass Lovable API key as primary
     const [sentimentResult, competitorResult, trendResult] = await Promise.allSettled([
-      runSentimentAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
-      runCompetitorAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
-      runTrendAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
+      runSentimentAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY, langInstruction),
+      runCompetitorAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY, langInstruction),
+      runTrendAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY, langInstruction),
     ]);
 
     // Store results in database
@@ -345,10 +353,13 @@ async function callGeminiDirect(prompt, geminiKey, retryCount = 0) {
   return data.candidates[0].content.parts[0].text;
 }
 
-async function runSentimentAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
+async function runSentimentAgent(productName, companyName, description, userGeminiKey, lovableApiKey, langInstruction = '') {
   console.log('Running sentiment agent for:', productName);
   
   const productContext = description ? `Product description: ${description}` : '';
+  
+  const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
+${productContext}${langInstruction}
   
   const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
@@ -450,10 +461,13 @@ Only respond with valid JSON, no markdown or explanations.`;
   }
 }
 
-async function runCompetitorAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
+async function runCompetitorAgent(productName, companyName, description, userGeminiKey, lovableApiKey, langInstruction = '') {
   console.log('Running competitor agent for:', productName);
   
   const productContext = description ? `Product context: ${description}` : '';
+  
+  const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
+${productContext}${langInstruction}
   
   const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
@@ -551,11 +565,14 @@ Only respond with valid JSON, no markdown.`;
   }
 }
 
-async function runTrendAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
+async function runTrendAgent(productName, companyName, description, userGeminiKey, lovableApiKey, langInstruction = '') {
   console.log('Running trend agent for:', productName);
   
   const currentDate = new Date().toISOString().split('T')[0];
   const productContext = description ? `Product context: ${description}` : '';
+  
+  const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
+${productContext}${langInstruction}
   
   const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
