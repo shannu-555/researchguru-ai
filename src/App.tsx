@@ -71,6 +71,9 @@ const App = () => (
                 <Route path="/consumer-persona" element={<ConsumerPersona />} />
                 <Route path="/scenario-simulator" element={<ScenarioSimulator />} />
                 <Route path="/market-analytics" element={<MarketAnalytics />} />
+                <Route path="/live-scraping" element={<LiveScraping />} />
+                <Route path="/price-comparison" element={<PriceComparison />} />
+                <Route path="/custom-dashboard" element={<CustomDashboard />} />
                 <Route path="/my-notes" element={<MyNotes />} />
                 <Route path="/settings" element={<EnhancedSettings />} />
                 <Route path="/pricing" element={<Pricing />} />

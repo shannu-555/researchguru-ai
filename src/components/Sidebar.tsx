@@ -22,6 +22,9 @@ const menuItems = [
   { title: "Cross-Market Correlation", url: "/cross-market", icon: TrendingUp },
   { title: "Consumer Persona Predictor", url: "/consumer-persona", icon: Users },
   { title: "Scenario Simulator", url: "/scenario-simulator", icon: Target },
+  { title: "Live Scraping", url: "/live-scraping", icon: Globe },
+  { title: "Price Comparison", url: "/price-comparison", icon: DollarSign },
+  { title: "Custom Dashboard", url: "/custom-dashboard", icon: LayoutDashboard },
 ];
 
 export function Sidebar() {
