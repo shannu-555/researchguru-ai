@@ -31,6 +31,7 @@ export default function Research() {
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [researchMode, setResearchMode] = useState<'quick' | 'deep'>('quick');
+  const [analysisLanguage, setAnalysisLanguage] = useState('en');
   const [agentStatus, setAgentStatus] = useState({
     sentiment: "Ready",
     competitor: "Ready",
