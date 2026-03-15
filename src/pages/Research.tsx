@@ -177,6 +177,7 @@ export default function Research() {
           companyName,
           description,
           projectId: project.id,
+          language: analysisLanguage,
         }
       });
 
