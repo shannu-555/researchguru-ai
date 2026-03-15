@@ -461,10 +461,13 @@ Only respond with valid JSON, no markdown or explanations.`;
   }
 }
 
-async function runCompetitorAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
+async function runCompetitorAgent(productName, companyName, description, userGeminiKey, lovableApiKey, langInstruction = '') {
   console.log('Running competitor agent for:', productName);
   
   const productContext = description ? `Product context: ${description}` : '';
+  
+  const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
+${productContext}${langInstruction}
   
   const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
