@@ -94,7 +94,11 @@ serve(async (req) => {
       });
     }
 
-    const { productName, companyName, description, projectId } = validationResult.data;
+    const { productName, companyName, description, projectId, language } = validationResult.data;
+    const analysisLang = language || 'en';
+    const langInstruction = analysisLang !== 'en' 
+      ? `\n\nIMPORTANT: Analyze this product in the context of the "${analysisLang}" language market. Include keywords, themes, and insights relevant to ${analysisLang}-speaking consumers. Provide the analysis output in English but reference original-language terms where relevant.` 
+      : '';
     
     // Validate that the user owns the project
     const { data: project, error: projectError } = await userSupabase
