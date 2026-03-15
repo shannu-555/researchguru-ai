@@ -1,4 +1,4 @@
-import { TrendingUp, Users, Target, Menu, LineChart, BarChart3, MessageSquare, Lightbulb, PieChart } from "lucide-react";
+import { TrendingUp, Users, Target, Menu, LineChart, BarChart3, MessageSquare, Lightbulb, PieChart, Globe, DollarSign, LayoutDashboard } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar as SidebarUI,
