@@ -352,6 +352,31 @@ export default function Research() {
               disabled={isLoading}
             />
 
+            {/* Multi-Language Support */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                Analysis Language
+              </label>
+              <Select value={analysisLanguage} onValueChange={setAnalysisLanguage}>
+                <SelectTrigger className="bg-background/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="hi">Hindi (हिन्दी)</SelectItem>
+                  <SelectItem value="es">Spanish (Español)</SelectItem>
+                  <SelectItem value="fr">French (Français)</SelectItem>
+                  <SelectItem value="de">German (Deutsch)</SelectItem>
+                  <SelectItem value="ja">Japanese (日本語)</SelectItem>
+                  <SelectItem value="ko">Korean (한국어)</SelectItem>
+                  <SelectItem value="zh">Chinese (中文)</SelectItem>
+                  <SelectItem value="ar">Arabic (العربية)</SelectItem>
+                  <SelectItem value="pt">Portuguese (Português)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
               onClick={handleStartResearch}
               disabled={isLoading}
