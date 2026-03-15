@@ -353,10 +353,13 @@ async function callGeminiDirect(prompt, geminiKey, retryCount = 0) {
   return data.candidates[0].content.parts[0].text;
 }
 
-async function runSentimentAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
+async function runSentimentAgent(productName, companyName, description, userGeminiKey, lovableApiKey, langInstruction = '') {
   console.log('Running sentiment agent for:', productName);
   
   const productContext = description ? `Product description: ${description}` : '';
+  
+  const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
+${productContext}${langInstruction}
   
   const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
