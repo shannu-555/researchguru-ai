@@ -165,9 +165,9 @@ serve(async (req) => {
 
     // Run all agents in parallel - pass Lovable API key as primary
     const [sentimentResult, competitorResult, trendResult] = await Promise.allSettled([
-      runSentimentAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
-      runCompetitorAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
-      runTrendAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY),
+      runSentimentAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY, langInstruction),
+      runCompetitorAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY, langInstruction),
+      runTrendAgent(productName, companyName, description, useGemini ? geminiKey : null, LOVABLE_API_KEY, langInstruction),
     ]);
 
     // Store results in database
