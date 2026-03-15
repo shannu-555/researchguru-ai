@@ -30,6 +30,10 @@ const runAgentsSchema = z.object({
     .nullable(),
   projectId: z.string()
     .uuid("Invalid project ID format"),
+  language: z.string()
+    .max(10)
+    .optional()
+    .nullable(),
 });
 
 serve(async (req) => {
