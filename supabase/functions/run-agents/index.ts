@@ -565,11 +565,14 @@ Only respond with valid JSON, no markdown.`;
   }
 }
 
-async function runTrendAgent(productName, companyName, description, userGeminiKey, lovableApiKey) {
+async function runTrendAgent(productName, companyName, description, userGeminiKey, lovableApiKey, langInstruction = '') {
   console.log('Running trend agent for:', productName);
   
   const currentDate = new Date().toISOString().split('T')[0];
   const productContext = description ? `Product context: ${description}` : '';
+  
+  const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
+${productContext}${langInstruction}
   
   const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
