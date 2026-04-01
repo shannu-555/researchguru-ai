@@ -383,10 +383,14 @@ export default function MarketAnalytics() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {kpiCards.map((k) => (
-          <Card key={k.title} className="border-border/40 overflow-hidden">
+          <Card
+            key={k.title}
+            className="border-border/40 overflow-hidden cursor-pointer transition-all hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 group"
+            onClick={() => setActiveTab(k.drillTab)}
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                   <k.icon className="h-4 w-4 text-primary" />
                 </div>
                 <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${trendBg(k.trend)} ${trendColor(k.trend)}`}>
@@ -395,7 +399,7 @@ export default function MarketAnalytics() {
                 </div>
               </div>
               <p className="text-xl font-bold tracking-tight">{typeof k.value === 'number' ? k.value.toLocaleString() : k.value}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{k.title}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 group-hover:text-primary/70 transition-colors">{k.title} → View details</p>
             </CardContent>
           </Card>
         ))}
