@@ -346,11 +346,11 @@ export default function MarketAnalytics() {
   }
 
   const kpiCards = [
-    { title: "Products", value: kpis.productsAnalyzed, icon: Package, trend: 12 },
-    { title: "Competitors", value: kpis.competitorsIdentified, icon: Target, trend: 8 },
-    { title: "Reviews", value: kpis.reviewsProcessed, icon: Star, trend: 15 },
-    { title: "Insights", value: kpis.insightsGenerated, icon: Lightbulb, trend: 22 },
-    { title: "Sentiment", value: `${(kpis.avgSentiment * 100).toFixed(0)}%`, icon: Activity, trend: kpis.avgSentiment > 0.6 ? 5 : -3 },
+    { title: "Products", value: kpis.productsAnalyzed, icon: Package, trend: 12, drillTab: "overview" },
+    { title: "Competitors", value: kpis.competitorsIdentified, icon: Target, trend: 8, drillTab: "competitors" },
+    { title: "Reviews", value: kpis.reviewsProcessed, icon: Star, trend: 15, drillTab: "sentiment" },
+    { title: "Insights", value: kpis.insightsGenerated, icon: Lightbulb, trend: 22, drillTab: "opportunities" },
+    { title: "Sentiment", value: `${(kpis.avgSentiment * 100).toFixed(0)}%`, icon: Activity, trend: kpis.avgSentiment > 0.6 ? 5 : -3, drillTab: "sentiment" },
   ];
 
   return (
