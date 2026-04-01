@@ -11,21 +11,30 @@ import { toast } from "sonner";
 import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis,
-  PolarRadiusAxis, ScatterChart, Scatter, ZAxis, AreaChart, Area
+  PolarRadiusAxis, ScatterChart, Scatter, ZAxis, AreaChart, Area,
 } from "recharts";
 import {
   BarChart3, TrendingUp, Users, Package, Star, Brain, Download, FileText,
-  Activity, Target, Lightbulb, Shield, ArrowUpRight, ArrowDownRight, Minus
+  Activity, Target, Lightbulb, Shield, ArrowUpRight, ArrowDownRight, Minus,
+  Filter, Calendar, RefreshCw,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays, subMonths, isAfter } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const COLORS = [
-  "hsl(263, 70%, 50%)", "hsl(220, 90%, 56%)", "hsl(189, 100%, 50%)",
-  "hsl(142, 71%, 45%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)",
-  "hsl(280, 65%, 60%)", "hsl(200, 80%, 50%)"
-];
+const PALETTE = {
+  primary: "hsl(263, 70%, 50%)",
+  blue: "hsl(220, 90%, 56%)",
+  cyan: "hsl(189, 100%, 50%)",
+  green: "hsl(142, 71%, 45%)",
+  amber: "hsl(38, 92%, 50%)",
+  red: "hsl(0, 84%, 60%)",
+  purple: "hsl(280, 65%, 60%)",
+  sky: "hsl(200, 80%, 50%)",
+};
+const COLORS = Object.values(PALETTE);
+
+type TimeRange = "7d" | "30d" | "90d" | "all";
 
 interface KPIData {
   productsAnalyzed: number;
@@ -46,23 +55,70 @@ interface AgentResult {
   tokens_used: number | null;
 }
 
+function trendIcon(value: number) {
+  if (value > 0) return <ArrowUpRight className="h-3.5 w-3.5" />;
+  if (value < 0) return <ArrowDownRight className="h-3.5 w-3.5" />;
+  return <Minus className="h-3.5 w-3.5" />;
+}
+
+function trendColor(value: number) {
+  if (value > 0) return "text-emerald-500";
+  if (value < 0) return "text-red-500";
+  return "text-muted-foreground";
+}
+
+function trendBg(value: number) {
+  if (value > 0) return "bg-emerald-500/10";
+  if (value < 0) return "bg-red-500/10";
+  return "bg-muted/50";
+}
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-popover border border-border rounded-lg p-3 shadow-lg text-sm">
+      <p className="font-medium text-foreground mb-1">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <div key={i} className="flex items-center gap-2 text-xs">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+          <span className="text-muted-foreground">{p.name}:</span>
+          <span className="font-medium text-foreground">{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function MarketAnalytics() {
   const { user } = useAuth();
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
   const [kpis, setKpis] = useState<KPIData>({ productsAnalyzed: 0, competitorsIdentified: 0, reviewsProcessed: 0, insightsGenerated: 0, avgSentiment: 0 });
   const [sentimentDist, setSentimentDist] = useState<any[]>([]);
   const [sentimentTrend, setSentimentTrend] = useState<any[]>([]);
   const [competitorData, setCompetitorData] = useState<any[]>([]);
   const [heatmapData, setHeatmapData] = useState<any[]>([]);
-  const [personaDist, setPersonaDist] = useState<any[]>([]);
-  const [personaBehavior, setPersonaBehavior] = useState<any[]>([]);
   const [featureGaps, setFeatureGaps] = useState<any[]>([]);
   const [trendMomentum, setTrendMomentum] = useState<any[]>([]);
   const [topicFrequency, setTopicFrequency] = useState<any[]>([]);
   const [confidenceData, setConfidenceData] = useState<any[]>([]);
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortField, setSortField] = useState<string>("priority");
+  const [sortField, setSortField] = useState("priority");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const cutoffDate = useCallback(() => {
+    if (timeRange === "7d") return subDays(new Date(), 7);
+    if (timeRange === "30d") return subDays(new Date(), 30);
+    if (timeRange === "90d") return subMonths(new Date(), 3);
+    return null;
+  }, [timeRange]);
+
+  const filterByDate = useCallback((items: any[], dateField: string) => {
+    const cut = cutoffDate();
+    if (!cut) return items;
+    return items.filter(i => isAfter(new Date(i[dateField]), cut));
+  }, [cutoffDate]);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -77,18 +133,19 @@ export default function MarketAnalytics() {
       ]);
 
       const projects = projectsRes.data || [];
-      const agents = (agentRes.data || []) as AgentResult[];
-      const insights = insightsRes.data || [];
+      const allAgents = (agentRes.data || []) as AgentResult[];
+      const allInsights = insightsRes.data || [];
       const embeddings = embeddingsRes.data || [];
       const runs = runsRes.data || [];
 
-      // KPIs
+      // Apply time filter
+      const agents = filterByDate(allAgents, "created_at");
+      const insights = filterByDate(allInsights, "created_at");
+
       const sentimentAgents = agents.filter(a => a.agent_type === "sentiment");
       const competitorAgents = agents.filter(a => a.agent_type === "competitor");
-      let totalCompetitors = 0;
-      let totalReviews = 0;
-      let sentimentSum = 0;
-      let sentimentCount = 0;
+
+      let totalCompetitors = 0, totalReviews = 0, sentimentSum = 0, sentimentCount = 0;
 
       competitorAgents.forEach(a => {
         const r = a.results as any;
@@ -116,20 +173,15 @@ export default function MarketAnalytics() {
       let pos = 0, neg = 0, neu = 0;
       sentimentAgents.forEach(a => {
         const r = a.results as any;
-        if (r?.positive) pos += r.positive;
-        if (r?.negative) neg += r.negative;
-        if (r?.neutral) neu += r.neutral;
-        if (r?.sentiment_distribution) {
-          pos += r.sentiment_distribution.positive || 0;
-          neg += r.sentiment_distribution.negative || 0;
-          neu += r.sentiment_distribution.neutral || 0;
-        }
+        pos += r?.positive || r?.sentiment_distribution?.positive || 0;
+        neg += r?.negative || r?.sentiment_distribution?.negative || 0;
+        neu += r?.neutral || r?.sentiment_distribution?.neutral || 0;
       });
       if (pos + neg + neu === 0) { pos = 45; neg = 20; neu = 35; }
       setSentimentDist([
-        { name: "Positive", value: pos },
-        { name: "Negative", value: neg },
-        { name: "Neutral", value: neu },
+        { name: "Positive", value: pos, fill: PALETTE.green },
+        { name: "Neutral", value: neu, fill: PALETTE.amber },
+        { name: "Negative", value: neg, fill: PALETTE.red },
       ]);
 
       // Sentiment Trend
@@ -167,24 +219,13 @@ export default function MarketAnalytics() {
       });
       setCompetitorData(Array.from(compMap.values()).slice(0, 8));
 
-      // Heatmap (Feature demand vs coverage)
+      // Heatmap
       const features = ["Price", "Quality", "Design", "Support", "Performance", "Durability"];
-      setHeatmapData(features.map(f => ({
-        feature: f,
-        demand: Math.round(Math.random() * 50 + 50),
-        coverage: Math.round(Math.random() * 50 + 30),
-        gap: 0,
-      })).map(f => ({ ...f, gap: f.demand - f.coverage })));
-
-      // Persona Distribution
-      const personaTypes = ["Budget Conscious", "Tech Enthusiast", "Quality Seeker", "Brand Loyal", "Early Adopter"];
-      setPersonaDist(personaTypes.map(p => ({ name: p, value: Math.round(Math.random() * 30 + 10) })));
-      setPersonaBehavior(personaTypes.map(p => ({
-        persona: p,
-        priceSensitivity: Math.round(Math.random() * 50 + 30),
-        featureFocus: Math.round(Math.random() * 50 + 30),
-        qualityFocus: Math.round(Math.random() * 50 + 30),
-      })));
+      setHeatmapData(features.map(f => {
+        const demand = Math.round(Math.random() * 50 + 50);
+        const coverage = Math.round(Math.random() * 50 + 30);
+        return { feature: f, demand, coverage, gap: demand - coverage };
+      }));
 
       // Feature Gaps
       const featureNames = ["AI Integration", "Mobile App", "Cloud Sync", "Analytics", "API Access", "Customization", "Security", "Collaboration"];
@@ -195,8 +236,7 @@ export default function MarketAnalytics() {
         priority: ["High", "Medium", "Low"][Math.floor(Math.random() * 3)],
       })));
 
-      // Trend Momentum
-      const trendAgents = agents.filter(a => a.agent_type === "trend");
+      // Trends
       const trendMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
       setTrendMomentum(trendMonths.map(m => ({
         month: m,
@@ -211,7 +251,7 @@ export default function MarketAnalytics() {
         growth: Math.round(Math.random() * 40 - 10),
       })));
 
-      // Confidence Data
+      // Confidence
       const insightTypes = ["Sentiment", "Competitor", "Trend", "Feature Gap", "Opportunity"];
       setConfidenceData(insightTypes.map(t => ({
         type: t,
@@ -220,13 +260,12 @@ export default function MarketAnalytics() {
       })));
 
       // Timeline
-      const timelineItems = runs.slice(0, 10).map(r => ({
+      setTimelineData(filterByDate(runs, "started_at").slice(0, 10).map(r => ({
         id: r.id,
         date: format(new Date(r.started_at), "dd MMM yyyy HH:mm"),
         status: r.status,
         stage: r.status === "completed" ? "Analysis Complete" : r.status === "running" ? "Processing" : "Queued",
-      }));
-      setTimelineData(timelineItems);
+      })));
 
     } catch (err) {
       console.error(err);
@@ -234,7 +273,7 @@ export default function MarketAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, filterByDate]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -252,7 +291,6 @@ export default function MarketAnalytics() {
     doc.text("Market Analytics Report", 14, 20);
     doc.setFontSize(10);
     doc.text(`Generated: ${format(new Date(), "dd MMM yyyy HH:mm")}`, 14, 28);
-
     doc.setFontSize(14);
     doc.text("Research Overview", 14, 40);
     autoTable(doc, {
@@ -266,7 +304,6 @@ export default function MarketAnalytics() {
         ["Avg Sentiment", kpis.avgSentiment.toFixed(2)],
       ],
     });
-
     doc.addPage();
     doc.setFontSize(14);
     doc.text("Feature Gap Analysis", 14, 20);
@@ -275,7 +312,6 @@ export default function MarketAnalytics() {
       head: [["Feature", "Available", "Demand Score", "Priority"]],
       body: featureGaps.map(f => [f.feature, f.available ? "Yes" : "No", String(f.demandScore), f.priority]),
     });
-
     doc.save("market-analytics-report.pdf");
     toast.success("PDF exported");
   };
@@ -301,156 +337,299 @@ export default function MarketAnalytics() {
     toast.success("CSV exported");
   };
 
-  const KPICard = ({ title, value, icon: Icon, trend }: { title: string; value: string | number; icon: any; trend?: number }) => (
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-            {trend != null && (
-              <div className={`flex items-center gap-1 mt-1 text-xs ${trend > 0 ? "text-green-500" : trend < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                {trend > 0 ? <ArrowUpRight className="h-3 w-3" /> : trend < 0 ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-                {Math.abs(trend)}%
-              </div>
-            )}
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
+  const kpiCards = [
+    { title: "Products", value: kpis.productsAnalyzed, icon: Package, trend: 12 },
+    { title: "Competitors", value: kpis.competitorsIdentified, icon: Target, trend: 8 },
+    { title: "Reviews", value: kpis.reviewsProcessed, icon: Star, trend: 15 },
+    { title: "Insights", value: kpis.insightsGenerated, icon: Lightbulb, trend: 22 },
+    { title: "Sentiment", value: `${(kpis.avgSentiment * 100).toFixed(0)}%`, icon: Activity, trend: kpis.avgSentiment > 0.6 ? 5 : -3 },
+  ];
+
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between">
+      {/* Header + Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Market Analytics</h1>
-          <p className="text-muted-foreground mt-1">Power BI–style dashboard for market research insights</p>
+          <h1 className="text-2xl font-bold tracking-tight">Market Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Data-driven insights from your research pipeline</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportCSV}><Download className="h-4 w-4 mr-2" />CSV</Button>
-          <Button size="sm" onClick={exportPDF}><FileText className="h-4 w-4 mr-2" />PDF</Button>
+        <div className="flex items-center gap-2">
+          <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+            <SelectTrigger className="w-[130px] h-8 text-xs">
+              <Calendar className="h-3 w-3 mr-1.5" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="all">All time</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadData}><RefreshCw className="h-3.5 w-3.5" /></Button>
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={exportCSV}><Download className="h-3 w-3 mr-1.5" />CSV</Button>
+          <Button size="sm" className="h-8 text-xs" onClick={exportPDF}><FileText className="h-3 w-3 mr-1.5" />PDF</Button>
         </div>
       </div>
 
-      {/* 1. KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <KPICard title="Products Analyzed" value={kpis.productsAnalyzed} icon={Package} trend={12} />
-        <KPICard title="Competitors Identified" value={kpis.competitorsIdentified} icon={Target} trend={8} />
-        <KPICard title="Reviews Processed" value={kpis.reviewsProcessed} icon={Star} trend={15} />
-        <KPICard title="Insights Generated" value={kpis.insightsGenerated} icon={Lightbulb} trend={22} />
-        <KPICard title="Avg Sentiment" value={kpis.avgSentiment.toFixed(2)} icon={Activity} trend={kpis.avgSentiment > 0.6 ? 5 : -3} />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {kpiCards.map((k) => (
+          <Card key={k.title} className="border-border/40 overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <k.icon className="h-4 w-4 text-primary" />
+                </div>
+                <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${trendBg(k.trend)} ${trendColor(k.trend)}`}>
+                  {trendIcon(k.trend)}
+                  {Math.abs(k.trend)}%
+                </div>
+              </div>
+              <p className="text-xl font-bold tracking-tight">{typeof k.value === 'number' ? k.value.toLocaleString() : k.value}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{k.title}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Tabs defaultValue="sentiment" className="space-y-4">
-        <TabsList className="flex flex-wrap gap-1">
-          <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
-          <TabsTrigger value="competitors">Competitors</TabsTrigger>
-          <TabsTrigger value="heatmap">Opportunity Map</TabsTrigger>
-          <TabsTrigger value="personas">Personas</TabsTrigger>
-          <TabsTrigger value="features">Feature Gaps</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-          <TabsTrigger value="confidence">Confidence</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="h-9 p-0.5 bg-muted/50">
+          <TabsTrigger value="overview" className="text-xs h-8">Overview</TabsTrigger>
+          <TabsTrigger value="sentiment" className="text-xs h-8">Sentiment</TabsTrigger>
+          <TabsTrigger value="competitors" className="text-xs h-8">Competitors</TabsTrigger>
+          <TabsTrigger value="opportunities" className="text-xs h-8">Opportunities</TabsTrigger>
+          <TabsTrigger value="trends" className="text-xs h-8">Trends</TabsTrigger>
+          <TabsTrigger value="features" className="text-xs h-8">Features</TabsTrigger>
         </TabsList>
 
-        {/* 2. Sentiment Analytics */}
-        <TabsContent value="sentiment" className="space-y-4">
+        {/* Overview */}
+        <TabsContent value="overview" className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Sentiment Distribution</CardTitle></CardHeader>
+            {/* Sentiment mini */}
+            <Card className="border-border/40">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Sentiment Distribution</CardTitle>
+              </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
-                    <Pie data={sentimentDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                      {sentimentDist.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                    <Pie data={sentimentDist} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3}>
+                      {sentimentDist.map((d, i) => <Cell key={i} fill={d.fill} />)}
                     </Pie>
-                    <Tooltip />
-                    <Legend />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Sentiment Trend</CardTitle></CardHeader>
+
+            {/* Topic frequency mini */}
+            <Card className="border-border/40">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Trending Topics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={topicFrequency}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                    <XAxis dataKey="topic" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="frequency" name="Mentions" radius={[4, 4, 0, 0]}>
+                      {topicFrequency.map((t, i) => (
+                        <Cell key={i} fill={t.growth > 0 ? PALETTE.green : t.growth < 0 ? PALETTE.red : PALETTE.amber} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex items-center justify-center gap-4 mt-2 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PALETTE.green }} /> Growing</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PALETTE.red }} /> Declining</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PALETTE.amber }} /> Stable</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Confidence overview */}
+          <Card className="border-border/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Insight Confidence</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {confidenceData.map((d) => (
+                  <div key={d.type} className="text-center p-3 rounded-lg border border-border/40">
+                    <div className={`inline-flex items-center justify-center h-10 w-10 rounded-full mb-2 ${
+                      d.confidence >= 80 ? 'bg-emerald-500/10' : d.confidence >= 65 ? 'bg-amber-500/10' : 'bg-red-500/10'
+                    }`}>
+                      <span className={`text-sm font-bold ${
+                        d.confidence >= 80 ? 'text-emerald-600' : d.confidence >= 65 ? 'text-amber-600' : 'text-red-600'
+                      }`}>{d.confidence}%</span>
+                    </div>
+                    <p className="text-xs font-medium">{d.type}</p>
+                    <p className="text-[10px] text-muted-foreground">{d.dataPoints} points</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Timeline mini */}
+          {timelineData.length > 0 && (
+            <Card className="border-border/40">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {timelineData.slice(0, 5).map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 py-1.5">
+                      <div className={`h-2 w-2 rounded-full shrink-0 ${
+                        item.status === "completed" ? "bg-emerald-500" : item.status === "running" ? "bg-amber-500 animate-pulse" : "bg-muted-foreground/40"
+                      }`} />
+                      <span className="text-sm flex-1">{item.stage}</span>
+                      <span className="text-xs text-muted-foreground">{item.date}</span>
+                      <Badge variant={item.status === "completed" ? "default" : "secondary"} className="text-[10px] h-5">{item.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Sentiment */}
+        <TabsContent value="sentiment" className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="border-border/40">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Sentiment Breakdown</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie data={sentimentDist} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={3}
+                      label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      {sentimentDist.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="border-border/40">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Sentiment Over Time</CardTitle></CardHeader>
               <CardContent>
                 {sentimentTrend.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={sentimentTrend}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[0, 1]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="score" stroke="hsl(263, 70%, 50%)" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
+                    <AreaChart data={sentimentTrend}>
+                      <defs>
+                        <linearGradient id="sentGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={PALETTE.primary} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={PALETTE.primary} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                      <YAxis domain={[0, 1]} tick={{ fontSize: 11 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area type="monotone" dataKey="score" stroke={PALETTE.primary} fill="url(#sentGrad)" strokeWidth={2} />
+                    </AreaChart>
                   </ResponsiveContainer>
-                ) : <p className="text-muted-foreground text-center py-12">Not enough data for trend</p>}
+                ) : <p className="text-muted-foreground text-center py-16 text-sm">Not enough data for trend</p>}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* 3. Competitor Market Position */}
+        {/* Competitors */}
         <TabsContent value="competitors" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-lg">Competitor Market Position</CardTitle></CardHeader>
+          <Card className="border-border/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Competitor Market Position</CardTitle>
+              <CardDescription className="text-xs">Multi-metric comparison across key dimensions</CardDescription>
+            </CardHeader>
             <CardContent>
               {competitorData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={competitorData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis type="number" domain={[0, 100]} />
-                    <YAxis type="category" dataKey="name" width={120} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="priceScore" name="Price" fill={COLORS[0]} />
-                    <Bar dataKey="featureScore" name="Features" fill={COLORS[1]} />
-                    <Bar dataKey="sentimentScore" name="Sentiment" fill={COLORS[2]} />
-                    <Bar dataKey="innovationScore" name="Innovation" fill={COLORS[3]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : <p className="text-muted-foreground text-center py-12">No competitor data available. Run research agents first.</p>}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={competitorData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="priceScore" name="Price" fill={PALETTE.primary} radius={[0, 2, 2, 0]} />
+                      <Bar dataKey="featureScore" name="Features" fill={PALETTE.blue} radius={[0, 2, 2, 0]} />
+                      <Bar dataKey="sentimentScore" name="Sentiment" fill={PALETTE.cyan} radius={[0, 2, 2, 0]} />
+                      <Bar dataKey="innovationScore" name="Innovation" fill={PALETTE.green} radius={[0, 2, 2, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <ResponsiveContainer width="100%" height={350}>
+                    <RadarChart data={competitorData.slice(0, 4).flatMap(c => [
+                      { metric: "Price", value: c.priceScore, name: c.name },
+                      { metric: "Features", value: c.featureScore, name: c.name },
+                      { metric: "Sentiment", value: c.sentimentScore, name: c.name },
+                      { metric: "Innovation", value: c.innovationScore, name: c.name },
+                    ]).reduce((acc: any[], item) => {
+                      let existing = acc.find(a => a.metric === item.metric);
+                      if (!existing) { existing = { metric: item.metric }; acc.push(existing); }
+                      existing[item.name] = item.value;
+                      return acc;
+                    }, [])}>
+                      <PolarGrid className="opacity-30" />
+                      <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
+                      <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
+                      {competitorData.slice(0, 4).map((c, i) => (
+                        <Radar key={c.name} name={c.name} dataKey={c.name} stroke={COLORS[i]} fill={COLORS[i]} fillOpacity={0.15} />
+                      ))}
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="text-muted-foreground text-center py-16 text-sm">No competitor data. Run research agents first.</p>}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 4. Market Opportunity Heatmap */}
-        <TabsContent value="heatmap" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Market Opportunity Map</CardTitle>
-              <CardDescription>Feature demand vs competitor coverage — larger gap = bigger opportunity</CardDescription>
+        {/* Opportunities */}
+        <TabsContent value="opportunities" className="space-y-4">
+          <Card className="border-border/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Market Opportunity Map</CardTitle>
+              <CardDescription className="text-xs">Feature demand vs coverage — larger bubble = bigger opportunity gap</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={350}>
                 <ScatterChart>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="coverage" name="Coverage" unit="%" />
-                  <YAxis dataKey="demand" name="Demand" unit="%" />
-                  <ZAxis dataKey="gap" range={[100, 600]} name="Gap" />
-                  <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-                  <Legend />
-                  <Scatter name="Features" data={heatmapData} fill="hsl(263, 70%, 50%)">
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                  <XAxis dataKey="coverage" name="Coverage" unit="%" tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="demand" name="Demand" unit="%" tick={{ fontSize: 11 }} />
+                  <ZAxis dataKey="gap" range={[80, 500]} name="Gap" />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "3 3" }} />
+                  <Scatter name="Features" data={heatmapData}>
                     {heatmapData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Scatter>
                 </ScatterChart>
               </ResponsiveContainer>
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-3">
                 {heatmapData.map((f, i) => (
-                  <Badge key={i} variant="outline" className="gap-1">
+                  <Badge key={i} variant="outline" className="gap-1.5 text-xs">
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    {f.feature} (gap: {f.gap}%)
+                    {f.feature}
+                    <span className={`font-medium ${f.gap > 20 ? 'text-emerald-600' : f.gap < 5 ? 'text-red-500' : 'text-amber-600'}`}>
+                      {f.gap > 0 ? '+' : ''}{f.gap}%
+                    </span>
                   </Badge>
                 ))}
               </div>
@@ -458,51 +637,63 @@ export default function MarketAnalytics() {
           </Card>
         </TabsContent>
 
-        {/* 5. Consumer Persona Insights */}
-        <TabsContent value="personas" className="space-y-4">
+        {/* Trends */}
+        <TabsContent value="trends" className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Persona Distribution</CardTitle></CardHeader>
+            <Card className="border-border/40">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Trend Momentum</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie data={personaDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                      {personaDist.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={trendMomentum}>
+                    <defs>
+                      <linearGradient id="momGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={PALETTE.primary} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={PALETTE.primary} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="momentum" name="Momentum" stroke={PALETTE.primary} fill="url(#momGrad)" strokeWidth={2} />
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Behavior Sensitivity</CardTitle></CardHeader>
+            <Card className="border-border/40">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Topic Frequency</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={personaBehavior}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="persona" angle={-20} textAnchor="end" height={60} tick={{ fontSize: 11 }} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="priceSensitivity" name="Price" fill={COLORS[0]} />
-                    <Bar dataKey="featureFocus" name="Features" fill={COLORS[1]} />
-                    <Bar dataKey="qualityFocus" name="Quality" fill={COLORS[2]} />
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={topicFrequency}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                    <XAxis dataKey="topic" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="frequency" name="Mentions" radius={[4, 4, 0, 0]}>
+                      {topicFrequency.map((t, i) => (
+                        <Cell key={i} fill={t.growth > 0 ? PALETTE.green : t.growth < 0 ? PALETTE.red : PALETTE.amber} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                <div className="flex items-center justify-center gap-4 mt-2 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PALETTE.green }} /> Growing</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PALETTE.red }} /> Declining</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PALETTE.amber }} /> Stable</span>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* 6. Feature Gap Analysis */}
+        {/* Features */}
         <TabsContent value="features" className="space-y-4">
-          <Card>
-            <CardHeader>
+          <Card className="border-border/40">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Feature Gap Analysis</CardTitle>
+                <CardTitle className="text-sm font-medium">Feature Gap Analysis</CardTitle>
                 <Select value={sortField} onValueChange={v => { setSortField(v); setSortDir("desc"); }}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-36 h-7 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="priority">Sort by Priority</SelectItem>
                     <SelectItem value="demandScore">Sort by Demand</SelectItem>
@@ -514,29 +705,31 @@ export default function MarketAnalytics() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Feature</TableHead>
-                    <TableHead>Available</TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => { setSortField("demandScore"); setSortDir(d => d === "asc" ? "desc" : "asc"); }}>Demand Score</TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => { setSortField("priority"); setSortDir(d => d === "asc" ? "desc" : "asc"); }}>Priority</TableHead>
+                    <TableHead className="text-xs">Feature</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs cursor-pointer" onClick={() => { setSortField("demandScore"); setSortDir(d => d === "asc" ? "desc" : "asc"); }}>Demand</TableHead>
+                    <TableHead className="text-xs cursor-pointer" onClick={() => { setSortField("priority"); setSortDir(d => d === "asc" ? "desc" : "asc"); }}>Priority</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedFeatureGaps.map((f, i) => (
                     <TableRow key={i}>
-                      <TableCell className="font-medium">{f.feature}</TableCell>
+                      <TableCell className="font-medium text-sm">{f.feature}</TableCell>
                       <TableCell>
-                        <Badge variant={f.available ? "default" : "destructive"}>{f.available ? "Yes" : "No"}</Badge>
+                        <span className={`inline-flex h-5 px-2 rounded-full text-[10px] font-medium items-center ${
+                          f.available ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'
+                        }`}>{f.available ? "Available" : "Missing"}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="h-2 flex-1 max-w-24 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full rounded-full bg-primary" style={{ width: `${f.demandScore}%` }} />
+                          <div className="h-1.5 flex-1 max-w-20 rounded-full bg-muted overflow-hidden">
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${f.demandScore}%` }} />
                           </div>
-                          <span className="text-sm">{f.demandScore}</span>
+                          <span className="text-xs text-muted-foreground w-6">{f.demandScore}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={f.priority === "High" ? "destructive" : f.priority === "Medium" ? "secondary" : "outline"}>
+                        <Badge variant={f.priority === "High" ? "destructive" : f.priority === "Medium" ? "secondary" : "outline"} className="text-[10px] h-5">
                           {f.priority}
                         </Badge>
                       </TableCell>
@@ -544,91 +737,6 @@ export default function MarketAnalytics() {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 7. Market Trends */}
-        <TabsContent value="trends" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Trend Momentum</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={trendMomentum}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="momentum" stroke="hsl(263, 70%, 50%)" fill="hsl(263, 70%, 50%)" fillOpacity={0.2} />
-                    <Area type="monotone" dataKey="volume" stroke="hsl(220, 90%, 56%)" fill="hsl(220, 90%, 56%)" fillOpacity={0.1} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Topic Frequency</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topicFrequency}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="topic" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="frequency" name="Mentions" fill="hsl(189, 100%, 50%)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* 8. Confidence Dashboard */}
-        <TabsContent value="confidence" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-lg">Insight Confidence Scores</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={confidenceData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis type="number" domain={[0, 100]} unit="%" />
-                  <YAxis type="category" dataKey="type" width={120} />
-                  <Tooltip />
-                  <Bar dataKey="confidence" name="Confidence" fill="hsl(263, 70%, 50%)" radius={[0, 4, 4, 0]}>
-                    {confidenceData.map((d, i) => (
-                      <Cell key={i} fill={d.confidence >= 80 ? "hsl(142, 71%, 45%)" : d.confidence >= 65 ? "hsl(38, 92%, 50%)" : "hsl(0, 84%, 60%)"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 9. Research Timeline */}
-        <TabsContent value="timeline" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-lg">Research Activity Timeline</CardTitle></CardHeader>
-            <CardContent>
-              {timelineData.length > 0 ? (
-                <div className="space-y-4">
-                  {timelineData.map((item, i) => (
-                    <div key={item.id} className="flex items-start gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className={`h-3 w-3 rounded-full ${item.status === "completed" ? "bg-green-500" : item.status === "running" ? "bg-yellow-500" : "bg-muted-foreground"}`} />
-                        {i < timelineData.length - 1 && <div className="w-px h-8 bg-border" />}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{item.stage}</span>
-                          <Badge variant={item.status === "completed" ? "default" : "secondary"} className="text-xs">{item.status}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{item.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-muted-foreground text-center py-12">No research activity yet</p>}
             </CardContent>
           </Card>
         </TabsContent>
