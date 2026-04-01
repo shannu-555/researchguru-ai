@@ -568,9 +568,6 @@ async function runTrendAgent(productName, companyName, description, userGeminiKe
   
   const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
 ${productContext}${langInstruction}
-  
-  const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
-${productContext}
 
 CRITICAL REQUIREMENTS:
 1. Provide GROUNDED trend analysis based on realistic market data
