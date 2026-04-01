@@ -358,11 +358,9 @@ async function runSentimentAgent(productName, companyName, description, userGemi
   
   const productContext = description ? `Product description: ${description}` : '';
   
-  const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
-${productContext}${langInstruction}
   
   const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
-${productContext}
+${productContext}${langInstruction}
 
 IMPORTANT SCORING METHODOLOGY:
 1. Overall Score Calculation (0-100):
@@ -468,9 +466,6 @@ async function runCompetitorAgent(productName, companyName, description, userGem
   
   const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
 ${productContext}${langInstruction}
-  
-  const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
-${productContext}
 
 CRITICAL REQUIREMENTS:
 1. ONLY include REAL products that ACTUALLY EXIST and compete directly with this product
@@ -573,9 +568,6 @@ async function runTrendAgent(productName, companyName, description, userGeminiKe
   
   const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
 ${productContext}${langInstruction}
-  
-  const prompt = `Analyze current market trends for "${productName}" by ${companyName || 'the company'}.
-${productContext}
 
 CRITICAL REQUIREMENTS:
 1. Provide GROUNDED trend analysis based on realistic market data
