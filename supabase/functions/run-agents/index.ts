@@ -360,7 +360,7 @@ async function runSentimentAgent(productName, companyName, description, userGemi
   
   
   const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
-${productContext}
+${productContext}${langInstruction}
 
 IMPORTANT SCORING METHODOLOGY:
 1. Overall Score Calculation (0-100):
