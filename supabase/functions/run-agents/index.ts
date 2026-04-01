@@ -466,9 +466,6 @@ async function runCompetitorAgent(productName, companyName, description, userGem
   
   const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
 ${productContext}${langInstruction}
-  
-  const prompt = `You are a competitive intelligence analyst. Identify and analyze the TOP REAL competitors for "${productName}" by ${companyName || 'the company'}.
-${productContext}
 
 CRITICAL REQUIREMENTS:
 1. ONLY include REAL products that ACTUALLY EXIST and compete directly with this product
