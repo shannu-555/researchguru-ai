@@ -358,8 +358,6 @@ async function runSentimentAgent(productName, companyName, description, userGemi
   
   const productContext = description ? `Product description: ${description}` : '';
   
-  const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
-${productContext}${langInstruction}
   
   const prompt = `You are a sentiment analysis expert. Analyze the market sentiment for "${productName}" by ${companyName || 'the company'}.
 ${productContext}
