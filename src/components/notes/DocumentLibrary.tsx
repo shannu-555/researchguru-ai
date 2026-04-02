@@ -32,7 +32,7 @@ export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
   const [uploading, setUploading] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-
+  const [pipelineDocId, setPipelineDocId] = useState<string | null>(null);
   const loadDocuments = useCallback(async () => {
     const { data, error } = await supabase
       .from("research_documents")
