@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, FileText, Image, File, Trash2, Brain, Loader2, Workflow } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { RAGPipelineStatus } from "./RAGPipelineStatus";
+import { DocumentPipelineCard } from "./DocumentPipelineCard";
 import { toast } from "sonner";
 
 interface Document {
@@ -25,14 +25,14 @@ interface Document {
 interface Props {
   userId: string;
   onAnalysisComplete?: () => void;
+  onTrainDocument?: (docId: string, fileName: string, textContent: string) => void;
 }
 
-export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
+export function DocumentLibrary({ userId, onAnalysisComplete, onTrainDocument }: Props) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-  const [pipelineDocId, setPipelineDocId] = useState<string | null>(null);
+
   const loadDocuments = useCallback(async () => {
     const { data, error } = await supabase
       .from("research_documents")
@@ -88,45 +88,12 @@ export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
     e.target.value = "";
   };
 
-  const analyzeDocument = async (doc: Document) => {
-    setAnalyzingId(doc.id);
-    try {
-      // For text files, read content; for others, use filename as context
-      let textContent = `Document: ${doc.file_name}\nType: ${doc.file_type}\nCategory: ${doc.category}`;
-
-      if (doc.file_type === "txt") {
-        const { data } = await supabase.storage.from("research-documents").download(doc.file_path);
-        if (data) textContent = await data.text();
-      }
-
-      const { data, error } = await supabase.functions.invoke("analyze-document", {
-        body: { documentId: doc.id, textContent },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      toast.success("Document analyzed successfully");
-      loadDocuments();
-      onAnalysisComplete?.();
-    } catch (err: any) {
-      toast.error(err.message || "Analysis failed");
-    }
-    setAnalyzingId(null);
-  };
-
   const deleteDocument = async (doc: Document) => {
     if (!confirm("Delete this document?")) return;
     await supabase.storage.from("research-documents").remove([doc.file_path]);
     await supabase.from("research_documents").delete().eq("id", doc.id);
     setDocuments(prev => prev.filter(d => d.id !== doc.id));
     toast.success("Document deleted");
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
   const getIcon = (type: string) => {
@@ -136,6 +103,13 @@ export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
   };
 
   const filtered = filterCategory === "all" ? documents : documents.filter(d => d.category === filterCategory);
+
+  const handleTrainAssistant = (docId: string, textContent: string) => {
+    const doc = documents.find(d => d.id === docId);
+    if (doc && onTrainDocument) {
+      onTrainDocument(docId, doc.file_name, textContent);
+    }
+  };
 
   return (
     <Card className="border-border/50">
@@ -182,56 +156,25 @@ export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
             <p>No documents yet. Upload PDF, DOCX, TXT, or images.</p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          <div className="space-y-3 max-h-[600px] overflow-y-auto">
             {filtered.map(doc => (
-              <div key={doc.id} className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div key={doc.id} className="space-y-1">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     {getIcon(doc.file_type)}
-                    <div className="min-w-0">
-                      <p className="font-medium truncate text-sm">{doc.file_name}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatSize(doc.file_size)}</span>
-                        <span>•</span>
-                        <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                        <Badge variant="outline" className="text-[10px]">{doc.category}</Badge>
-                      </div>
-                    </div>
+                    <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                    <span>•</span>
+                    <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                    <Badge variant="outline" className="text-[10px]">{doc.category}</Badge>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPipelineDocId(pipelineDocId === doc.id ? null : doc.id)}
-                      title="RAG Pipeline"
-                    >
-                      <Workflow className="h-4 w-4" />
-                    </Button>
-                    {doc.analysis_status === "completed" ? (
-                      <Badge variant="secondary" className="text-[10px]">Analyzed</Badge>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => analyzeDocument(doc)}
-                        disabled={analyzingId === doc.id}
-                      >
-                        {analyzingId === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => deleteDocument(doc)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => deleteDocument(doc)} className="h-6 w-6 p-0">
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
                 </div>
-                {pipelineDocId === doc.id && (
-                  <RAGPipelineStatus
-                    documentId={doc.id}
-                    fileName={doc.file_name}
-                    textContent={`Document: ${doc.file_name}\nType: ${doc.file_type}\nCategory: ${doc.category}\nSize: ${formatSize(doc.file_size)}`}
-                    onComplete={() => loadDocuments()}
-                  />
-                )}
+                <DocumentPipelineCard
+                  document={doc}
+                  onTrainAssistant={handleTrainAssistant}
+                />
               </div>
             ))}
           </div>
