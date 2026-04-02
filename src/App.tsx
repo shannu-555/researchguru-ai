@@ -13,6 +13,7 @@ import AIInsightsCenter from "./pages/AIInsightsCenter";
 import CrossMarket from "./pages/CrossMarket";
 import ConsumerPersona from "./pages/ConsumerPersona";
 import ScenarioSimulator from "./pages/ScenarioSimulator";
+import RAGPipeline from "./pages/RAGPipeline";
 import MyNotes from "./pages/MyNotes";
 import AIAssistant from "./pages/AIAssistant";
 import EnhancedSettings from "./pages/EnhancedSettings";
