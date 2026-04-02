@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, Image, File, Trash2, Brain, Loader2 } from "lucide-react";
+import { Upload, FileText, Image, File, Trash2, Brain, Loader2, Workflow } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { RAGPipelineStatus } from "./RAGPipelineStatus";
 import { toast } from "sonner";
 
 interface Document {
@@ -31,7 +32,7 @@ export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
   const [uploading, setUploading] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-
+  const [pipelineDocId, setPipelineDocId] = useState<string | null>(null);
   const loadDocuments = useCallback(async () => {
     const { data, error } = await supabase
       .from("research_documents")
@@ -183,36 +184,54 @@ export function DocumentLibrary({ userId, onAnalysisComplete }: Props) {
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
             {filtered.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {getIcon(doc.file_type)}
-                  <div className="min-w-0">
-                    <p className="font-medium truncate text-sm">{doc.file_name}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{formatSize(doc.file_size)}</span>
-                      <span>•</span>
-                      <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                      <Badge variant="outline" className="text-[10px]">{doc.category}</Badge>
+              <div key={doc.id} className="space-y-2">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {getIcon(doc.file_type)}
+                    <div className="min-w-0">
+                      <p className="font-medium truncate text-sm">{doc.file_name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{formatSize(doc.file_size)}</span>
+                        <span>•</span>
+                        <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="text-[10px]">{doc.category}</Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {doc.analysis_status === "completed" ? (
-                    <Badge variant="secondary" className="text-[10px]">Analyzed</Badge>
-                  ) : (
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => analyzeDocument(doc)}
-                      disabled={analyzingId === doc.id}
+                      onClick={() => setPipelineDocId(pipelineDocId === doc.id ? null : doc.id)}
+                      title="RAG Pipeline"
                     >
-                      {analyzingId === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+                      <Workflow className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => deleteDocument(doc)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                    {doc.analysis_status === "completed" ? (
+                      <Badge variant="secondary" className="text-[10px]">Analyzed</Badge>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => analyzeDocument(doc)}
+                        disabled={analyzingId === doc.id}
+                      >
+                        {analyzingId === doc.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => deleteDocument(doc)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
+                {pipelineDocId === doc.id && (
+                  <RAGPipelineStatus
+                    documentId={doc.id}
+                    fileName={doc.file_name}
+                    textContent={`Document: ${doc.file_name}\nType: ${doc.file_type}\nCategory: ${doc.category}\nSize: ${formatSize(doc.file_size)}`}
+                    onComplete={() => loadDocuments()}
+                  />
+                )}
               </div>
             ))}
           </div>
