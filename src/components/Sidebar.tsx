@@ -22,6 +22,7 @@ const menuItems = [
   { title: "Cross-Market Correlation", url: "/cross-market", icon: TrendingUp },
   { title: "Consumer Persona Predictor", url: "/consumer-persona", icon: Users },
   { title: "Scenario Simulator", url: "/scenario-simulator", icon: Target },
+  { title: "RAG Processing Pipeline", url: "/rag-pipeline", icon: Workflow },
 ];
 
 export function Sidebar() {
