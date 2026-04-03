@@ -430,25 +430,10 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{key.key_name}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {showKeys[key.id]
-                          ? key.key_value
-                          : '•'.repeat(Math.min(key.key_value.length, 40))}
+                        {'•'.repeat(12)} (saved securely)
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setShowKeys((prev) => ({ ...prev, [key.id]: !prev[key.id] }))
-                        }
-                      >
-                        {showKeys[key.id] ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
