@@ -10,7 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import Research from "./pages/Research";
 import Comparison from "./pages/Comparison";
 import AIInsightsCenter from "./pages/AIInsightsCenter";
-import CrossMarket from "./pages/CrossMarket";
 import ConsumerPersona from "./pages/ConsumerPersona";
 import ScenarioSimulator from "./pages/ScenarioSimulator";
 import RAGPipeline from "./pages/RAGPipeline";
@@ -65,7 +64,6 @@ const App = () => (
                 <Route path="/comparison" element={<Comparison />} />
                 <Route path="/ai-insights" element={<AIInsightsCenter />} />
                 <Route path="/ai-assistant" element={<AIAssistant />} />
-                <Route path="/cross-market" element={<CrossMarket />} />
                 <Route path="/consumer-persona" element={<ConsumerPersona />} />
                 <Route path="/scenario-simulator" element={<ScenarioSimulator />} />
                 <Route path="/rag-pipeline" element={<RAGPipeline />} />

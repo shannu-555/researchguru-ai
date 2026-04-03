@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShoppingCart, MessageSquare, Newspaper, BookOpen, Youtube, Globe, CheckCircle2, Clock, Loader2, FileText } from 'lucide-react';
+import { ShoppingCart, MessageSquare, Youtube, Globe, CheckCircle2, Clock, Loader2, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,17 +42,14 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
     const agentData = agentRes.data ?? [];
     const embeddings = embRes.data ?? [];
 
-    // Count embeddings by content_type for approximations
     const typeCounts: Record<string, number> = {};
     embeddings.forEach((e) => {
       const t = (e.content_type || 'unknown').toLowerCase();
       typeCounts[t] = (typeCounts[t] || 0) + 1;
     });
 
-    // Extract counts from agent results
     const sentimentAgent = agentData.find((a) => a.agent_type === 'sentiment');
     const competitorAgent = agentData.find((a) => a.agent_type === 'competitor');
-    const trendAgent = agentData.find((a) => a.agent_type === 'trend');
 
     const getResultCount = (agent: any, keys: string[]): number => {
       if (!agent?.results) return 0;
@@ -61,7 +58,6 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
         if (Array.isArray(r[key])) return r[key].length;
         if (typeof r[key] === 'number') return r[key];
       }
-      // Fallback: count related embeddings
       return 0;
     };
 
@@ -74,8 +70,6 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
 
     const reviewCount = getResultCount(sentimentAgent, ['reviews', 'review_count', 'total_reviews']) || typeCounts['review'] || typeCounts['sentiment'] || 0;
     const redditCount = getResultCount(sentimentAgent, ['reddit_posts', 'discussions']) || typeCounts['reddit'] || typeCounts['discussion'] || 0;
-    const newsCount = getResultCount(trendAgent, ['articles', 'news_articles', 'news_count']) || typeCounts['news'] || typeCounts['article'] || 0;
-    const blogCount = typeCounts['blog'] || typeCounts['tech_blog'] || Math.floor(newsCount * 0.4);
     const videoCount = typeCounts['video'] || typeCounts['youtube'] || 0;
 
     const built: SourceMetric[] = [
@@ -94,20 +88,6 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
         lastUpdated: sentimentAgent?.updated_at ?? null,
       },
       {
-        name: 'Google News',
-        icon: Newspaper,
-        status: perplexityDone ? 'completed' : agentStatus(trendAgent),
-        documentsRetrieved: newsCount,
-        lastUpdated: trendAgent?.updated_at ?? null,
-      },
-      {
-        name: 'Tech Blog Articles',
-        icon: BookOpen,
-        status: perplexityDone ? 'completed' : 'pending',
-        documentsRetrieved: blogCount,
-        lastUpdated: trendAgent?.updated_at ?? null,
-      },
-      {
         name: 'YouTube Reviews',
         icon: Youtube,
         status: videoCount > 0 ? 'completed' : agentStatus(competitorAgent),
@@ -123,8 +103,6 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
   const getDefaultSources = (): SourceMetric[] => [
     { name: 'Amazon Reviews', icon: ShoppingCart, status: 'pending', documentsRetrieved: 0, lastUpdated: null },
     { name: 'Reddit Discussions', icon: MessageSquare, status: 'pending', documentsRetrieved: 0, lastUpdated: null },
-    { name: 'Google News', icon: Newspaper, status: 'pending', documentsRetrieved: 0, lastUpdated: null },
-    { name: 'Tech Blog Articles', icon: BookOpen, status: 'pending', documentsRetrieved: 0, lastUpdated: null },
     { name: 'YouTube Reviews', icon: Youtube, status: 'pending', documentsRetrieved: 0, lastUpdated: null },
   ];
 
@@ -159,7 +137,6 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
         <CardDescription className="text-xs">Real-time data collection metrics from research sources</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Progress summary */}
         <div className="space-y-2 p-3 rounded-lg border border-border/50 bg-secondary/10">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Collection Progress</span>
@@ -172,7 +149,6 @@ export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: Data
           </div>
         </div>
 
-        {/* Source list */}
         <div className="space-y-2">
           {sources.map((src) => {
             const Icon = src.icon;

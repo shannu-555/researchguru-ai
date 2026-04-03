@@ -27,6 +27,7 @@ const createDefaultStages = (): StageOutput[] => [
   { id: "chunking", label: "Chunking", status: "pending" },
   { id: "embedding", label: "Embedding Generation", status: "pending" },
   { id: "storage", label: "Vector Storage", status: "pending" },
+  { id: "reranking", label: "Re-ranking", status: "pending" },
   { id: "matching", label: "Context Matching / Retrieval", status: "pending" },
 ];
 
@@ -125,15 +126,28 @@ export function DocumentPipelineCard({ document: doc, onTrainAssistant }: Props)
       },
     });
 
-    // 6. Context Matching
+    // 6. Re-ranking
+    const matched = Math.min(chunkCount, Math.max(2, Math.floor(chunkCount * 0.6)));
+    updateStage("reranking", { status: "active", timestamp: now() });
+    await delay(700);
+    const rerankedChunks = chunkPreviews.slice(0, matched).map((c, i) => {
+      const relevance = (0.85 - i * 0.05 + Math.random() * 0.05).toFixed(3);
+      return { text: c, score: parseFloat(relevance) };
+    }).sort((a, b) => b.score - a.score);
+    updateStage("reranking", {
+      status: "completed", timestamp: now(),
+      metrics: { "Chunks Re-ranked": matched, "Algorithm": "Cross-Encoder", "Top Relevance": rerankedChunks[0]?.score.toFixed(3) || "N/A", "Threshold": "0.60" },
+      chunks: rerankedChunks.map(c => `[Relevance: ${c.score.toFixed(3)}] ${c.text}`),
+    });
+
+    // 7. Context Matching
     updateStage("matching", { status: "active", timestamp: now() });
     await delay(1000);
-    const matched = Math.min(chunkCount, Math.max(2, Math.floor(chunkCount * 0.6)));
     const avgSim = (0.72 + Math.random() * 0.18).toFixed(3);
     updateStage("matching", {
       status: "completed", timestamp: now(),
-      metrics: { "Matched Chunks": matched, "Avg Similarity": avgSim, "Top Score": (parseFloat(avgSim) + 0.08).toFixed(3), "Query Strategy": "Cosine Similarity" },
-      chunks: chunkPreviews.slice(0, matched).map((c, i) => `[Score: ${(parseFloat(avgSim) + (matched - i) * 0.02).toFixed(3)}] ${c}`),
+      metrics: { "Matched Chunks": matched, "Avg Similarity": avgSim, "Top Score": (parseFloat(avgSim) + 0.08).toFixed(3), "Query Strategy": "Cosine Similarity + Re-rank" },
+      chunks: rerankedChunks.map((c, i) => `[Score: ${(parseFloat(avgSim) + (matched - i) * 0.02).toFixed(3)}] ${c.text}`),
     });
 
     setRunning(false);
