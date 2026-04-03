@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Save, Plus, Eye, EyeOff, Key, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Trash2, Save, Plus, Key, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
-  const [showKeys, setShowKeys] = useState<{ [key: string]: boolean }>({});
+  const [showKeys] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [geminiKey, setGeminiKey] = useState("");
   const [geminiKeyStatus, setGeminiKeyStatus] = useState<"none" | "active" | "invalid">("none");
@@ -38,13 +38,12 @@ export default function SettingsPage() {
     
     const { data } = await supabase
       .from("user_api_keys")
-      .select("key_value")
+      .select("id")
       .eq("user_id", user.id)
       .eq("key_name", "GEMINI_API_KEY")
       .single();
 
-    if (data?.key_value) {
-      setGeminiKey(data.key_value);
+    if (data?.id) {
       setGeminiKeyStatus("active");
     } else {
       setGeminiKeyStatus("none");
@@ -430,25 +429,10 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{key.key_name}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {showKeys[key.id]
-                          ? key.key_value
-                          : '•'.repeat(Math.min(key.key_value.length, 40))}
+                        {'•'.repeat(12)} (saved securely)
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setShowKeys((prev) => ({ ...prev, [key.id]: !prev[key.id] }))
-                        }
-                      >
-                        {showKeys[key.id] ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
