@@ -27,6 +27,7 @@ const createDefaultStages = (): StageOutput[] => [
   { id: "chunking", label: "Chunking", status: "pending" },
   { id: "embedding", label: "Embedding Generation", status: "pending" },
   { id: "storage", label: "Vector Storage", status: "pending" },
+  { id: "reranking", label: "Re-ranking", status: "pending" },
   { id: "matching", label: "Context Matching / Retrieval", status: "pending" },
 ];
 
