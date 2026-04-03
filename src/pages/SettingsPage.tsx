@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
-  const [showKeys, setShowKeys] = useState<{ [key: string]: boolean }>({});
+  const [showKeys] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [geminiKey, setGeminiKey] = useState("");
   const [geminiKeyStatus, setGeminiKeyStatus] = useState<"none" | "active" | "invalid">("none");
