@@ -127,6 +127,7 @@ export function DocumentPipelineCard({ document: doc, onTrainAssistant }: Props)
     });
 
     // 6. Re-ranking
+    const matched = Math.min(chunkCount, Math.max(2, Math.floor(chunkCount * 0.6)));
     updateStage("reranking", { status: "active", timestamp: now() });
     await delay(700);
     const rerankedChunks = chunkPreviews.slice(0, matched).map((c, i) => {
