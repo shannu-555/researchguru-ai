@@ -38,13 +38,12 @@ export default function SettingsPage() {
     
     const { data } = await supabase
       .from("user_api_keys")
-      .select("key_value")
+      .select("id")
       .eq("user_id", user.id)
       .eq("key_name", "GEMINI_API_KEY")
       .single();
 
-    if (data?.key_value) {
-      setGeminiKey(data.key_value);
+    if (data?.id) {
       setGeminiKeyStatus("active");
     } else {
       setGeminiKeyStatus("none");
