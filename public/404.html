@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/researchguru-ai/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ResearchGuru AI</title>
+    <script>
+      // Redirect all 404s to the index.html with the route in the query string
+      var pathname = window.location.pathname;
+      if (pathname.includes('/researchguru-ai/')) {
+        // Remove /researchguru-ai/ prefix and store the actual route
+        var route = pathname.replace('/researchguru-ai/', '');
+        var redirect = '/researchguru-ai/?' + (route ? 'route=' + encodeURIComponent(route) : '');
+        window.location.replace(redirect);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
