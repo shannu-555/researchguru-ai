@@ -124,7 +124,7 @@ IMPORTANT: Respond ONLY with valid JSON (no markdown, no code blocks). Use this 
         generationConfig: {
           temperature: 0.2,
           topP: 0.9,
-          maxOutputTokens: isQuickMode ? 2000 : 8000,
+          maxOutputTokens: isQuickMode ? 4000 : 8000,
           responseMimeType: 'application/json',
         },
       }),
