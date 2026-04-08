@@ -165,20 +165,37 @@ IMPORTANT: Respond ONLY with valid JSON (no markdown, no code blocks). Use this 
 
     let parsedResult;
     try {
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonStr = jsonMatch ? jsonMatch[1].trim() : content.trim();
-      parsedResult = JSON.parse(jsonStr);
+      // Try direct parse first
+      parsedResult = JSON.parse(content.trim());
     } catch {
-      parsedResult = {
-        marketOverview: content,
-        sentimentSummary: { overall: "unknown", confidence: 50, details: "Could not parse structured data" },
-        competitors: [],
-        trends: [],
-        keyInsights: [content.substring(0, 500)],
-        limitations: ["Response was not in expected format"],
-        suggestions: ["Try running the analysis again"],
-        sources: []
-      };
+      try {
+        // Try extracting from markdown code block
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+          parsedResult = JSON.parse(jsonMatch[1].trim());
+        } else {
+          // Try fixing common JSON issues (truncated closing brackets)
+          let fixed = content.trim();
+          const openBraces = (fixed.match(/{/g) || []).length;
+          const closeBraces = (fixed.match(/}/g) || []).length;
+          const openBrackets = (fixed.match(/\[/g) || []).length;
+          const closeBrackets = (fixed.match(/]/g) || []).length;
+          fixed += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
+          fixed += '}'.repeat(Math.max(0, openBraces - closeBraces));
+          parsedResult = JSON.parse(fixed);
+        }
+      } catch {
+        parsedResult = {
+          marketOverview: content.substring(0, 2000),
+          sentimentSummary: { overall: "neutral", confidence: 50, details: "Response parsing required fallback" },
+          competitors: [],
+          trends: [],
+          keyInsights: [content.substring(0, 500)],
+          limitations: ["Response was not in expected format"],
+          suggestions: ["Try running the analysis again"],
+          sources: []
+        };
+      }
     }
 
     console.log(`Gemini research completed for: ${productName}`);
