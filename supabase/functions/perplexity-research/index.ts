@@ -81,7 +81,7 @@ serve(async (req) => {
     }
 
     const isQuickMode = mode === 'quick';
-    const model = isQuickMode ? 'gemini-2.5-flash-preview-05-20' : 'gemini-2.5-pro-preview-05-06';
+    const model = isQuickMode ? 'gemini-2.5-flash' : 'gemini-2.5-pro';
 
     const systemPrompt = isQuickMode
       ? `You are a market research assistant. Provide BRIEF, CONCISE summaries. Keep responses short with bullet points. Focus on key facts only. Maximum 3-4 sentences per section.`
