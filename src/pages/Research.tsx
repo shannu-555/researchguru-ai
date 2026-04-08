@@ -112,11 +112,11 @@ export default function Research() {
       setPerplexityResults(data);
       toast({
         title: `${researchMode === 'quick' ? 'Quick' : 'Deep'} Research Complete`,
-        description: "Perplexity analysis finished successfully.",
+        description: "Gemini analysis finished successfully.",
       });
     } catch (error: any) {
-      console.error('Perplexity research error:', error);
-      setResearchError(error.message || 'Perplexity research failed');
+      console.error('Gemini research error:', error);
+      setResearchError(error.message || 'Gemini research failed');
     } finally {
       setIsPerplexityLoading(false);
     }
