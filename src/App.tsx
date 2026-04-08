@@ -49,7 +49,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter basename="/researchguru-ai/">
+          <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route
