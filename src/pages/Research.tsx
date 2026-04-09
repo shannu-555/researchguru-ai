@@ -500,7 +500,7 @@ export default function Research() {
 
           <ProductPurchaseLinks productName={productName || viewingProductName || ''} />
 
-          <AgentMetricsCalculator agentOutcomes={agentOutcomes} />
+          
         </>
       )}
     </div>
