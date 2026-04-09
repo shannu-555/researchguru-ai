@@ -401,8 +401,6 @@ export default function Research() {
         <AgentExecutionMonitor
           projectId={currentProjectId}
           localStatus={agentStatus}
-          isPerplexityLoading={isPerplexityLoading}
-          perplexityDone={!!perplexityResults}
         />
       </div>
 
