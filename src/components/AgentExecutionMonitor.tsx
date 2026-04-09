@@ -89,7 +89,6 @@ const defaultAgents: AgentEntry[] = [
   { name: 'Sentiment Agent', key: 'sentiment', icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
   { name: 'Competitor Agent', key: 'competitor', icon: Target, color: 'text-cyan-400', bg: 'bg-cyan-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
   { name: 'Trend Agent', key: 'trend', icon: Activity, color: 'text-green-400', bg: 'bg-green-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
-  { name: 'Perplexity Research', key: 'perplexity', icon: Globe, color: 'text-amber-400', bg: 'bg-amber-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
 ];
 
 // Default fallback ETAs per agent type (ms)
