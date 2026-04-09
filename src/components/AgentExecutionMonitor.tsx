@@ -169,8 +169,6 @@ const progressColor = (status: string) => {
 export const AgentExecutionMonitor = ({
   projectId,
   localStatus,
-  isPerplexityLoading,
-  perplexityDone,
 }: AgentExecutionMonitorProps) => {
   const { user } = useAuth();
   const [agents, setAgents] = useState<AgentEntry[]>(defaultAgents);
