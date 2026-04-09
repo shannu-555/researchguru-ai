@@ -272,7 +272,7 @@ export const AgentExecutionMonitor = ({
         };
       })
     );
-  }, [localStatus, isPerplexityLoading, perplexityDone, historicalAvgs]);
+  }, [localStatus, historicalAvgs]);
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = agents.length > 0 ? Math.round(agents.reduce((s, a) => s + a.stage.progress, 0) / agents.length) : 0;
