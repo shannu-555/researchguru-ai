@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Clock, Loader2, XCircle, TrendingUp, Target, Activity, Globe, Timer } from 'lucide-react';
+import { CheckCircle, Clock, Loader2, XCircle, TrendingUp, Target, Activity, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -52,8 +52,6 @@ function getRunningStage(agentKey: string): AgentStage {
       return { label: 'Collecting Competitor Data', progress: 40, detail: 'Mapping competitor landscape...' };
     case 'trend':
       return { label: 'Processing Trend Signals', progress: 50, detail: 'Detecting market patterns...' };
-    case 'perplexity':
-      return { label: 'Web Research In Progress', progress: 45, detail: 'Querying search APIs...' };
     default:
       return { label: 'Processing', progress: 50, detail: '' };
   }
@@ -78,8 +76,6 @@ function getSummaryDetail(agentKey: string, results: any): string {
       if (count !== null) return `${count} trends detected`;
       return 'Trend detection complete';
     }
-    case 'perplexity':
-      return 'Web research complete';
     default:
       return 'Analysis complete';
   }
@@ -89,7 +85,6 @@ const defaultAgents: AgentEntry[] = [
   { name: 'Sentiment Agent', key: 'sentiment', icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
   { name: 'Competitor Agent', key: 'competitor', icon: Target, color: 'text-cyan-400', bg: 'bg-cyan-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
   { name: 'Trend Agent', key: 'trend', icon: Activity, color: 'text-green-400', bg: 'bg-green-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
-  { name: 'Perplexity Research', key: 'perplexity', icon: Globe, color: 'text-amber-400', bg: 'bg-amber-500/10', status: 'ready', executionTimeMs: null, updatedAt: null, stage: STAGES.ready, avgHistoricalMs: null, startedAt: null },
 ];
 
 // Default fallback ETAs per agent type (ms)
@@ -97,14 +92,11 @@ const DEFAULT_ETA: Record<string, number> = {
   sentiment: 12000,
   competitor: 14000,
   trend: 10000,
-  perplexity: 8000,
 };
 
 interface AgentExecutionMonitorProps {
   projectId?: string | null;
   localStatus?: Record<string, string>;
-  isPerplexityLoading?: boolean;
-  perplexityDone?: boolean;
 }
 
 function mapDbStatus(s: string | null): AgentEntry['status'] {
@@ -173,8 +165,6 @@ const progressColor = (status: string) => {
 export const AgentExecutionMonitor = ({
   projectId,
   localStatus,
-  isPerplexityLoading,
-  perplexityDone,
 }: AgentExecutionMonitorProps) => {
   const { user } = useAuth();
   const [agents, setAgents] = useState<AgentEntry[]>(defaultAgents);
@@ -258,13 +248,8 @@ export const AgentExecutionMonitor = ({
 
     setAgents((prev) =>
       prev.map((agent) => {
-        let newStatus: AgentEntry['status'];
-        if (agent.key === 'perplexity') {
-          newStatus = isPerplexityLoading ? 'running' : perplexityDone ? 'completed' : 'ready';
-        } else {
-          const override = localStatus[agent.key];
-          newStatus = override ? mapLocalStatus(override) : agent.status;
-        }
+        const override = localStatus[agent.key];
+        const newStatus: AgentEntry['status'] = override ? mapLocalStatus(override) : agent.status;
 
         // Track when agent starts running
         if (newStatus === 'running' && agent.status !== 'running') {
@@ -283,7 +268,7 @@ export const AgentExecutionMonitor = ({
         };
       })
     );
-  }, [localStatus, isPerplexityLoading, perplexityDone, historicalAvgs]);
+  }, [localStatus, historicalAvgs]);
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = agents.length > 0 ? Math.round(agents.reduce((s, a) => s + a.stage.progress, 0) / agents.length) : 0;

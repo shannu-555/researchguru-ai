@@ -43,8 +43,8 @@ export default function Research() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [hasCheckedApiKey, setHasCheckedApiKey] = useState(false);
-  const [perplexityResults, setPerplexityResults] = useState<any>(null);
-  const [isPerplexityLoading, setIsPerplexityLoading] = useState(false);
+  const [deepAnalysisResults, setDeepAnalysisResults] = useState<any>(null);
+  const [isDeepAnalysisLoading, setIsDeepAnalysisLoading] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -92,8 +92,8 @@ export default function Research() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const runPerplexityResearch = async () => {
-    setIsPerplexityLoading(true);
+  const runDeepAnalysis = async () => {
+    setIsDeepAnalysisLoading(true);
     setResearchError(null);
     
     try {
@@ -109,7 +109,7 @@ export default function Research() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setPerplexityResults(data);
+      setDeepAnalysisResults(data);
       toast({
         title: `${researchMode === 'quick' ? 'Quick' : 'Deep'} Research Complete`,
         description: "Gemini analysis finished successfully.",
@@ -118,7 +118,7 @@ export default function Research() {
       console.error('Gemini research error:', error);
       setResearchError(error.message || 'Gemini research failed');
     } finally {
-      setIsPerplexityLoading(false);
+      setIsDeepAnalysisLoading(false);
     }
   };
 
@@ -140,8 +140,8 @@ export default function Research() {
       trend: "Pending",
     });
 
-    // Run Perplexity research in parallel
-    runPerplexityResearch();
+    // Run Deep Analysis (Gemini) in parallel
+    runDeepAnalysis();
 
     try {
       const { data: project, error: projectError } = await supabase
@@ -401,14 +401,11 @@ export default function Research() {
         <AgentExecutionMonitor
           projectId={currentProjectId}
           localStatus={agentStatus}
-          isPerplexityLoading={isPerplexityLoading}
-          perplexityDone={!!perplexityResults}
         />
       </div>
 
       {/* Data Sources Panel */}
       <DataSourcesPanel
-        perplexityDone={!!perplexityResults}
         agentsDone={Object.values(agentStatus).some(s => s === 'Completed')}
         projectId={currentProjectId}
       />
@@ -422,17 +419,17 @@ export default function Research() {
         />
       )}
 
-      {/* Perplexity Research Results */}
-      {perplexityResults?.data && (
+      {/* Deep Analysis Results */}
+      {deepAnalysisResults?.data && (
         <Card className="glass-effect border-border/50">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-purple-500" />
-                  Perplexity Research Results
+                  Deep Analysis Results
                 </CardTitle>
-                <CardDescription>Real-time web research powered by Perplexity AI</CardDescription>
+                <CardDescription>Comprehensive research powered by Gemini AI</CardDescription>
               </div>
               <Badge variant="outline" className="capitalize bg-purple-500/10">
                 {researchMode} Mode
@@ -441,9 +438,9 @@ export default function Research() {
           </CardHeader>
           <CardContent>
             <PerplexityResearchResults 
-              data={perplexityResults.data}
-              mode={perplexityResults.mode}
-              timestamp={perplexityResults.timestamp}
+              data={deepAnalysisResults.data}
+              mode={deepAnalysisResults.mode}
+              timestamp={deepAnalysisResults.timestamp}
             />
           </CardContent>
         </Card>
@@ -465,7 +462,7 @@ export default function Research() {
                       projectName: productName || viewingProductName || 'Research Project',
                       companyName: companyName,
                       agentResults: Object.values(agentOutcomes),
-                      perplexityData: perplexityResults?.data,
+                      perplexityData: deepAnalysisResults?.data,
                       researchMode
                     }}
                   />

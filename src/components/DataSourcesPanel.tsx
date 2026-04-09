@@ -13,18 +13,17 @@ interface SourceMetric {
 }
 
 interface DataSourcesPanelProps {
-  perplexityDone?: boolean;
   agentsDone?: boolean;
   projectId?: string | null;
 }
 
-export const DataSourcesPanel = ({ perplexityDone, agentsDone, projectId }: DataSourcesPanelProps) => {
+export const DataSourcesPanel = ({ agentsDone, projectId }: DataSourcesPanelProps) => {
   const [sources, setSources] = useState<SourceMetric[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadMetrics();
-  }, [projectId, perplexityDone, agentsDone]);
+  }, [projectId, agentsDone]);
 
   const loadMetrics = async () => {
     if (!projectId) {
