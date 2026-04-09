@@ -92,8 +92,8 @@ export default function Research() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const runPerplexityResearch = async () => {
-    setIsPerplexityLoading(true);
+  const runDeepAnalysis = async () => {
+    setIsDeepAnalysisLoading(true);
     setResearchError(null);
     
     try {
@@ -109,7 +109,7 @@ export default function Research() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setPerplexityResults(data);
+      setDeepAnalysisResults(data);
       toast({
         title: `${researchMode === 'quick' ? 'Quick' : 'Deep'} Research Complete`,
         description: "Gemini analysis finished successfully.",
@@ -118,7 +118,7 @@ export default function Research() {
       console.error('Gemini research error:', error);
       setResearchError(error.message || 'Gemini research failed');
     } finally {
-      setIsPerplexityLoading(false);
+      setIsDeepAnalysisLoading(false);
     }
   };
 
