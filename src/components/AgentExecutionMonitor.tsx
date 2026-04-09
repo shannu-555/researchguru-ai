@@ -52,8 +52,6 @@ function getRunningStage(agentKey: string): AgentStage {
       return { label: 'Collecting Competitor Data', progress: 40, detail: 'Mapping competitor landscape...' };
     case 'trend':
       return { label: 'Processing Trend Signals', progress: 50, detail: 'Detecting market patterns...' };
-    case 'perplexity':
-      return { label: 'Web Research In Progress', progress: 45, detail: 'Querying search APIs...' };
     default:
       return { label: 'Processing', progress: 50, detail: '' };
   }
