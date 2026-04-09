@@ -96,7 +96,6 @@ const DEFAULT_ETA: Record<string, number> = {
   sentiment: 12000,
   competitor: 14000,
   trend: 10000,
-  perplexity: 8000,
 };
 
 interface AgentExecutionMonitorProps {
