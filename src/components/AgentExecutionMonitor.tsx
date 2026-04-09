@@ -76,8 +76,6 @@ function getSummaryDetail(agentKey: string, results: any): string {
       if (count !== null) return `${count} trends detected`;
       return 'Trend detection complete';
     }
-    case 'perplexity':
-      return 'Web research complete';
     default:
       return 'Analysis complete';
   }
