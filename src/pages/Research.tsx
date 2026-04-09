@@ -140,8 +140,8 @@ export default function Research() {
       trend: "Pending",
     });
 
-    // Run Perplexity research in parallel
-    runPerplexityResearch();
+    // Run Deep Analysis (Gemini) in parallel
+    runDeepAnalysis();
 
     try {
       const { data: project, error: projectError } = await supabase
