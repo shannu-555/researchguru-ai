@@ -43,8 +43,8 @@ export default function Research() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [hasCheckedApiKey, setHasCheckedApiKey] = useState(false);
-  const [perplexityResults, setPerplexityResults] = useState<any>(null);
-  const [isPerplexityLoading, setIsPerplexityLoading] = useState(false);
+  const [deepAnalysisResults, setDeepAnalysisResults] = useState<any>(null);
+  const [isDeepAnalysisLoading, setIsDeepAnalysisLoading] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
