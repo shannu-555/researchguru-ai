@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Clock, Loader2, XCircle, TrendingUp, Target, Activity, Globe, Timer } from 'lucide-react';
+import { CheckCircle, Clock, Loader2, XCircle, TrendingUp, Target, Activity, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
