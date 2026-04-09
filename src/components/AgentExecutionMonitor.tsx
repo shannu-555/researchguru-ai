@@ -101,8 +101,6 @@ const DEFAULT_ETA: Record<string, number> = {
 interface AgentExecutionMonitorProps {
   projectId?: string | null;
   localStatus?: Record<string, string>;
-  isPerplexityLoading?: boolean;
-  perplexityDone?: boolean;
 }
 
 function mapDbStatus(s: string | null): AgentEntry['status'] {
