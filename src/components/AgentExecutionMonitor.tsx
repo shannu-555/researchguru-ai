@@ -252,13 +252,8 @@ export const AgentExecutionMonitor = ({
 
     setAgents((prev) =>
       prev.map((agent) => {
-        let newStatus: AgentEntry['status'];
-        if (agent.key === 'perplexity') {
-          newStatus = isPerplexityLoading ? 'running' : perplexityDone ? 'completed' : 'ready';
-        } else {
-          const override = localStatus[agent.key];
-          newStatus = override ? mapLocalStatus(override) : agent.status;
-        }
+        const override = localStatus[agent.key];
+        const newStatus: AgentEntry['status'] = override ? mapLocalStatus(override) : agent.status;
 
         // Track when agent starts running
         if (newStatus === 'running' && agent.status !== 'running') {
