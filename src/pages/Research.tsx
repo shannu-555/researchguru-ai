@@ -462,7 +462,7 @@ export default function Research() {
                       projectName: productName || viewingProductName || 'Research Project',
                       companyName: companyName,
                       agentResults: Object.values(agentOutcomes),
-                      perplexityData: perplexityResults?.data,
+                      perplexityData: deepAnalysisResults?.data,
                       researchMode
                     }}
                   />
