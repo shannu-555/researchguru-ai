@@ -13,7 +13,6 @@ interface SourceMetric {
 }
 
 interface DataSourcesPanelProps {
-  perplexityDone?: boolean;
   agentsDone?: boolean;
   projectId?: string | null;
 }
