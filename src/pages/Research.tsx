@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { InsightsSummary } from "@/components/InsightsSummary";
-import { AgentMetricsCalculator } from "@/components/AgentMetricsCalculator";
+
 import { ProductPurchaseLinks } from "@/components/ProductPurchaseLinks";
 import { GeminiApiKeyModal } from "@/components/GeminiApiKeyModal";
 import { ResearchModeSelector } from "@/components/ResearchModeSelector";
