@@ -419,17 +419,17 @@ export default function Research() {
         />
       )}
 
-      {/* Perplexity Research Results */}
-      {perplexityResults?.data && (
+      {/* Deep Analysis Results */}
+      {deepAnalysisResults?.data && (
         <Card className="glass-effect border-border/50">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-purple-500" />
-                  Perplexity Research Results
+                  Deep Analysis Results
                 </CardTitle>
-                <CardDescription>Real-time web research powered by Perplexity AI</CardDescription>
+                <CardDescription>Comprehensive research powered by Gemini AI</CardDescription>
               </div>
               <Badge variant="outline" className="capitalize bg-purple-500/10">
                 {researchMode} Mode
@@ -438,9 +438,9 @@ export default function Research() {
           </CardHeader>
           <CardContent>
             <PerplexityResearchResults 
-              data={perplexityResults.data}
-              mode={perplexityResults.mode}
-              timestamp={perplexityResults.timestamp}
+              data={deepAnalysisResults.data}
+              mode={deepAnalysisResults.mode}
+              timestamp={deepAnalysisResults.timestamp}
             />
           </CardContent>
         </Card>
